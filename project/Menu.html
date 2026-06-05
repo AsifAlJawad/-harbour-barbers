@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Harbour Barbers — Service Menu</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,400;1,600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --cream:#f7f5f0; --beige:#eeebe4; --tan:#ccc7be;
+    --accent:#8b2635; --dark:#18181a; --muted:#6a6560;
+    --serif:'Cormorant Garamond',Georgia,serif;
+    --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  }
+  *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:var(--sans);background:#dedad2;display:flex;flex-direction:column;align-items:center;padding:36px 20px 60px;gap:20px;min-height:100vh;}
+
+  /* ── Controls bar ── */
+  .controls{display:flex;gap:12px;align-items:center;background:#fff;padding:11px 20px;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,0.1);flex-wrap:wrap;justify-content:center;}
+  .controls a{font-size:13px;color:var(--muted);text-decoration:none;transition:color 0.18s;}
+  .controls a:hover{color:var(--dark);}
+  .sep{color:var(--tan);font-size:14px;}
+  .print-btn{padding:9px 22px;background:var(--accent);color:#fff;border:none;border-radius:6px;font-size:13.5px;font-weight:500;cursor:pointer;font-family:var(--sans);display:flex;align-items:center;gap:7px;transition:background 0.18s;}
+  .print-btn:hover{background:#6e1e2a;}
+
+  /* ── A4 page ── */
+  .page{width:210mm;min-height:296mm;background:var(--cream);box-shadow:0 10px 50px rgba(0,0,0,0.22);position:relative;overflow:hidden;display:flex;flex-direction:column;}
+
+  /* ── Header ── */
+  .ph{background:var(--dark);padding:44px 56px 52px;position:relative;overflow:hidden;flex-shrink:0;}
+  .ph::after{content:'';position:absolute;bottom:-1px;left:0;right:0;height:44px;background:var(--cream);clip-path:ellipse(54% 100% at 50% 100%);}
+  .ph-orn{display:flex;align-items:center;gap:14px;margin-bottom:18px;}
+  .orn-line{flex:1;height:1px;background:rgba(255,255,255,0.14);}
+  .orn-dia{width:7px;height:7px;background:var(--accent);transform:rotate(45deg);flex-shrink:0;}
+  .ph-name{font-family:var(--serif);font-size:50px;font-weight:700;color:#fff;letter-spacing:0.04em;text-transform:uppercase;line-height:1;text-align:center;}
+  .ph-name span{color:var(--accent);}
+  .ph-tag{font-family:var(--serif);font-size:14px;font-style:italic;color:rgba(255,255,255,0.4);text-align:center;margin-top:9px;letter-spacing:0.1em;}
+
+  /* ── Body ── */
+  .pb{padding:28px 56px 36px;flex:1;}
+
+  /* ── Section ── */
+  .ms{margin-bottom:30px;}
+  .ms-head{display:flex;align-items:center;gap:14px;margin-bottom:14px;}
+  .ms-line{flex:1;height:1px;background:var(--tan);}
+  .ms-title{font-family:var(--serif);font-size:12px;font-weight:600;letter-spacing:0.16em;text-transform:uppercase;color:var(--accent);white-space:nowrap;}
+
+  /* ── 2-col ── */
+  .mc{display:grid;grid-template-columns:1fr 1fr;gap:0 48px;}
+
+  /* ── Menu item ── */
+  .mi{display:flex;align-items:baseline;padding:8px 0;border-bottom:1px solid rgba(204,199,190,0.5);}
+  .mi:last-child{border-bottom:none;}
+  .mi-left{flex-shrink:0;}
+  .mi-name{font-family:var(--serif);font-size:18px;font-weight:700;color:var(--dark);display:block;line-height:1.2;}
+  .mi-desc{font-family:var(--serif);font-size:11.5px;font-style:italic;color:var(--muted);font-weight:300;display:block;margin-top:2px;}
+  .mi-dots{flex:1;border-bottom:1.5px dotted rgba(180,160,130,0.65);margin:0 12px 4px;min-width:16px;}
+  .mi-right{flex-shrink:0;text-align:right;}
+  .mi-price{font-family:var(--serif);font-size:19px;font-weight:700;color:var(--accent);}
+  .mi-dur{font-size:10px;color:var(--muted);letter-spacing:0.06em;text-transform:uppercase;display:block;text-align:right;margin-top:1px;}
+
+  /* ── Note strip ── */
+  .note-strip{background:var(--beige);border-radius:7px;padding:11px 16px;font-size:11.5px;color:var(--muted);line-height:1.6;margin-bottom:28px;font-family:var(--serif);font-style:italic;text-align:center;}
+
+  /* ── Footer ── */
+  .pf{margin:auto 56px 0;padding:18px 0 32px;border-top:1px solid var(--tan);display:flex;justify-content:space-between;align-items:center;flex-shrink:0;}
+  .pf-addr{font-size:10.5px;color:var(--muted);line-height:1.9;}
+  .pf-logo{font-family:var(--serif);font-size:16px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.08em;text-align:center;}
+  .pf-note{font-family:var(--serif);font-size:11px;font-style:italic;color:var(--muted);text-align:right;line-height:1.8;}
+
+  @media print {
+    body{background:#fff;padding:0;}
+    .controls{display:none;}
+    .page{box-shadow:none;width:100%;min-height:100vh;}
+    @page{size:A4;margin:0;}
+  }
+  @media(max-width:800px){
+    .page{width:100%;}
+    .mc{grid-template-columns:1fr;}
+    .ph-name{font-size:36px;}
+  }
+</style>
+</head>
+<body>
+
+<div class="controls">
+  <a href="Harbour Barbers.html">← Back to site</a>
+  <span class="sep">|</span>
+  <a href="Owner Dashboard.html">Owner Dashboard</a>
+  <span class="sep">|</span>
+  <button class="print-btn" onclick="window.print()">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+    Print / Save PDF
+  </button>
+</div>
+
+<div class="page">
+  <!-- Header -->
+  <div class="ph">
+    <div class="ph-orn"><div class="orn-line"></div><div class="orn-dia"></div><div class="orn-line"></div></div>
+    <div class="ph-name">Harbour <span>Barbers</span></div>
+    <div class="ph-tag">Precision cuts. Classic craft.</div>
+    <div class="ph-orn" style="margin-top:18px;margin-bottom:0"><div class="orn-line"></div><div class="orn-dia"></div><div class="orn-line"></div></div>
+  </div>
+
+  <!-- Body -->
+  <div class="pb">
+
+    <!-- Haircuts -->
+    <div class="ms">
+      <div class="ms-head"><div class="ms-line"></div><div class="ms-title">Haircuts</div><div class="ms-line"></div></div>
+      <div class="mc">
+        <div>
+          <div class="mi"><div class="mi-left"><span class="mi-name">Men's Haircut</span><span class="mi-desc">Scissor or clipper, any length</span></div><div class="mi-dots"></div><div class="mi-right"><span class="mi-price">from $35</span><span class="mi-dur">30 min</span></div></div>
+          <div class="mi"><div class="mi-left"><span class="mi-name">Skin Fade</span><span class="mi-desc">Zero to gradual fade, blended smooth</span></div><div class="mi-dots"></div><div class="mi-right"><span class="mi-price">$40</span><span class="mi-dur">45 min</span></div></div>
+          <div class="mi"><div class="mi-left"><span class="mi-name">Shape Up</span><span class="mi-desc">Edge, line-up and fade finish</span></div><div class="mi-dots"></div><div class="mi-right"><span class="mi-price">$30</span><span class="mi-dur">20 min</span></div></div>
+        </div>
+        <div>
+          <div class="mi"><div class="mi-left"><span class="mi-name">Kids' Cut</span><span class="mi-desc">Patient &amp; friendly, under 12</span></div><div class="mi-dots"></div><div class="mi-right"><span class="mi-price">$25</span><span class="mi-dur">25 min</span></div></div>
+          <div class="mi"><div class="mi-left"><span class="mi-name">Hair Styling</span><span class="mi-desc">Finish with varnish, foam or clay</span></div><div class="mi-dots"></div><div class="mi-right"><span class="mi-price">$20</span><span class="mi-dur">15 min</span></div></div>
+          <div class="mi"><div class="mi-left"><span class="mi-name">Dad + Son</span><span class="mi-desc">Two cuts, together</span></div><div class="mi-dots"></div><div class="mi-right"><span class="mi-price">$55</span><span class="mi-dur">55 min</span></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Beard & Shave -->
+    <div class="ms">
+      <div class="ms-head"><div class="ms-line"></div><div class="ms-title">Beard &amp; Shave</div><div class="ms-line"></div></div>
+      <div class="mc">
+        <div>
+          <div class="mi"><div class="mi-left"><span class="mi-name">Beard Trim</span><span class="mi-desc">Shape, edge, and condition</span></div><div class="mi-dots"></div><div class="mi-right"><span class="mi-price">$25</span><span class="mi-dur">20 min</span></div></div>
+          <div class="mi"><div class="mi-left"><span class="mi-name">Hot Towel Shave</span><span class="mi-desc">Traditional straight razor finish</span></div><div class="mi-dots"></div><div class="mi-right"><span class="mi-price">$55</span><span class="mi-dur">60 min</span></div></div>
+        </div>
+        <div>
+          <div class="mi"><div class="mi-left"><span class="mi-name">Shaving</span><span class="mi-desc">Professional equipment finish</span></div><div class="mi-dots"></div><div class="mi-right"><span class="mi-price">$20</span><span class="mi-dur">20 min</span></div></div>
+          <div class="mi"><div class="mi-left"><span class="mi-name">Hair + Beard</span><span class="mi-desc">Full service — cut and beard</span></div><div class="mi-dots"></div><div class="mi-right"><span class="mi-price">$55</span><span class="mi-dur">60 min</span></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Note -->
+    <div class="note-strip">Walk-ins always welcome &mdash; booking ahead guarantees your preferred barber and time. Saturdays fill fast.</div>
+
+  </div>
+
+  <!-- Footer -->
+  <div class="pf">
+    <div class="pf-addr">4857 Elliott St Unit 107<br>Delta, BC &nbsp;V4K 2X7<br>+1 (604) 946-8033</div>
+    <div class="pf-logo">Harbour Barbers</div>
+    <div class="pf-note">Book online at harbourbarbers.ca<br>Walk-ins welcome<br>Prices subject to change</div>
+  </div>
+</div>
+
+</body>
+</html>
