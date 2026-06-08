@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Harbour Barbers — Staff Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<script src="/config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="/api.js"></script>
+<script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js" integrity="sha384-mJ4MQEfB5R7qFvxDIDjqtF5Gr7QMp6sMCg2Kt4ikL6bTqJIh90NShiNkMWLLPbH" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js" integrity="sha384-3u9UBbsOvVBVFm0gMaL7DX4OPO5OOhJxhZrGwFMoQ9KwmW1TvBRAtmhLFlGRCTq" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+  :root{
+    --cream:#f7f5f0;--beige:#eeebe4;--tan:#ccc7be;
+    --accent:#8b2635;--dark:#18181a;--muted:#6a6560;
+    --serif:'Cormorant Garamond',Georgia,serif;
+    --sans:'DM Sans',system-ui,sans-serif;
+  }
+  *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+  html,body,#root{height:100%;}
+  body{font-family:var(--sans);color:var(--dark);overflow:hidden;}
+  @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+  button{cursor:pointer;font-family:var(--sans);border:none;background:none;}
+  input,select,textarea{font-family:var(--sans);}
+  ::-webkit-scrollbar{width:5px;}
+  ::-webkit-scrollbar-track{background:transparent;}
+  ::-webkit-scrollbar-thumb{background:var(--tan);border-radius:3px;}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef } = React;
+
+function Skel({w='100%',h='20px',r='8px',style={}}) {
+  return <div style={{width:w,height:h,borderRadius:r,background:'linear-gradient(90deg,var(--beige) 25%,var(--cream) 50%,var(--beige) 75%)',backgroundSize:'200% 100%',animation:'shimmer 1.4s infinite',...style}}/>;
+}
+
+function useIsMobile() {
+  const [mob, setMob] = useState(window.innerWidth < 768);
+  useEffect(() => {
+    const h = () => setMob(window.innerWidth < 768);
+    window.addEventListener('resize', h);
+    return () => window.removeEventListener('resize', h);
+  }, []);
+  return mob;
+}
+
+// ── Helpers ────────────────────────────────────────────
+function fmtAppt(a) {
+  const d = new Date(a.scheduled_at);
+  const h = d.getHours(), m = d.getMinutes();
+  const hd = h > 12 ? h - 12 : h || 12;
+  const time = `${hd}:${m < 10 ? '0' + m : m} ${h >= 12 ? 'PM' : 'AM'}`;
+  const uiStatus = {pending:'confirmed',confirmed:'confirmed',completed:'done',no_show:'noshow',cancelled:'cancelled'};
+  return {
+    id: a.id, time,
+    client: a.profiles?.full_name || 'Unknown',
+    service: a.services?.name || '—', serviceId: a.service_id,
+    barber: a.barbers?.name || '—', barberId: a.barber_id,
+    duration: a.services?.duration || 30,
+    status: uiStatus[a.status] || 'confirmed',
+    price: (a.services?.price || 0) / 100,
+  };
+}
+
+// ── Icon ──────────────────────────────────────────────
+function Ico({d,size=16}) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d={d}/>
+    </svg>
+  );
+}
+
+const NAV = [
+  {id:'today',    label:'Today',    short:'Today',   d:'M12 2a10 10 0 100 20A10 10 0 0012 2zM12 6v6l4 2'},
+  {id:'services', label:'Services', short:'Services',d:'M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z'},
+  {id:'team',     label:'Team',     short:'Team',    d:'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75M9 7a4 4 0 100 8 4 4 0 000-8z'},
+  {id:'customers',label:'Customers',short:'Clients', d:'M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 11a4 4 0 100-8 4 4 0 000 8z'},
+];
+
+// ── Error Banner ───────────────────────────────────────
+function ErrorBanner({message, onRetry}) {
+  return (
+    <div style={{background:'#fef2f2',border:'1px solid #fecaca',borderRadius:'10px',padding:'14px 18px',marginBottom:'16px',display:'flex',alignItems:'center',justifyContent:'space-between',gap:'12px'}}>
+      <span style={{fontSize:'13px',color:'#dc2626'}}>{message}</span>
+      {onRetry && <button onClick={onRetry} style={{fontSize:'12px',color:'#dc2626',border:'1px solid #fecaca',borderRadius:'5px',padding:'4px 10px',cursor:'pointer',background:'none',flexShrink:0}}>Retry</button>}
+    </div>
+  );
+}
+
+// ── Mobile Shell ───────────────────────────────────────
+function MobileHeader({user}) {
+  const initials = (user?.full_name || user?.email || 'S')[0].toUpperCase();
+  const name = user?.full_name || user?.email || 'Staff';
+  return (
+    <div style={{background:'var(--dark)',padding:'13px 20px',display:'flex',alignItems:'center',justifyContent:'space-between',borderBottom:'1px solid rgba(255,255,255,0.07)',flexShrink:0}}>
+      <div style={{fontFamily:'var(--serif)',fontSize:'17px',fontWeight:'700',color:'#f7f5f0',letterSpacing:'0.04em',textTransform:'uppercase'}}>
+        Harbour <span style={{color:'var(--accent)'}}>Barbers</span>
+      </div>
+      <div style={{display:'flex',alignItems:'center',gap:'8px'}}>
+        <div style={{background:'rgba(255,255,255,0.08)',borderRadius:'6px',padding:'3px',display:'flex',gap:'2px'}}>
+          <button style={{padding:'4px 10px',borderRadius:'4px',fontSize:'11px',fontWeight:'500',background:'rgba(255,255,255,0.15)',color:'#f7f5f0',border:'none',cursor:'default'}}>Staff</button>
+          <a href="owner.html" style={{padding:'4px 10px',borderRadius:'4px',fontSize:'11px',fontWeight:'500',background:'none',color:'rgba(255,255,255,0.4)',textDecoration:'none',display:'flex',alignItems:'center'}}>Owner</a>
+        </div>
+        <div style={{width:'30px',height:'30px',borderRadius:'50%',background:'#2a3a2a',color:'#fff',fontFamily:'var(--serif)',fontWeight:'700',fontSize:'14px',display:'flex',alignItems:'center',justifyContent:'center'}}>{initials}</div>
+        <div style={{color:'rgba(255,255,255,0.6)',fontSize:'12px',fontWeight:'500'}}>{name.split(' ')[0]}</div>
+      </div>
+    </div>
+  );
+}
+
+function MobileNav({view,setView}) {
+  return (
+    <nav style={{background:'var(--dark)',borderTop:'1px solid rgba(255,255,255,0.1)',display:'flex',flexShrink:0,paddingBottom:'env(safe-area-inset-bottom,0px)'}}>
+      {NAV.map(item => {
+        const active = view===item.id;
+        return (
+          <button key={item.id} onClick={()=>setView(item.id)} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:'3px',padding:'10px 2px 12px',border:'none',background:'none',cursor:'pointer',color:active?'#fff':'rgba(255,255,255,0.4)',transition:'color 0.15s',position:'relative'}}>
+            {active && <div style={{position:'absolute',top:0,left:'50%',transform:'translateX(-50%)',width:'20px',height:'2px',background:'var(--accent)',borderRadius:'0 0 2px 2px'}}/>}
+            <Ico d={item.d} size={18}/>
+            <span style={{fontSize:'9.5px',fontWeight:active?'600':'400'}}>{item.short}</span>
+          </button>
+        );
+      })}
+    </nav>
+  );
+}
+
+// ── Desktop Sidebar ────────────────────────────────────
+function Sidebar({view,setView,user}) {
+  const initials = (user?.full_name || user?.email || 'S')[0].toUpperCase();
+  const name = user?.full_name || user?.email || 'Staff';
+  const role = user?.role ? (user.role.charAt(0).toUpperCase() + user.role.slice(1)) : 'Staff';
+  return (
+    <div style={{width:'256px',minWidth:'256px',height:'100%',background:'var(--dark)',display:'flex',flexDirection:'column'}}>
+      <div style={{padding:'26px 28px 20px',borderBottom:'1px solid rgba(255,255,255,0.07)'}}>
+        <div style={{fontFamily:'var(--serif)',fontSize:'19px',fontWeight:'700',color:'#f7f5f0',letterSpacing:'0.04em',textTransform:'uppercase'}}>
+          Harbour <span style={{color:'var(--accent)'}}>Barbers</span>
+        </div>
+        <div style={{fontSize:'11px',color:'rgba(255,255,255,0.3)',letterSpacing:'0.14em',textTransform:'uppercase',marginTop:'3px'}}>Staff Dashboard</div>
+      </div>
+      <div style={{padding:'18px 28px 16px',borderBottom:'1px solid rgba(255,255,255,0.07)'}}>
+        <div style={{background:'rgba(255,255,255,0.06)',borderRadius:'7px',padding:'4px',display:'flex',gap:'3px',marginBottom:'14px'}}>
+          <button style={{flex:1,padding:'5px',borderRadius:'5px',fontSize:'12px',fontWeight:'500',background:'rgba(255,255,255,0.12)',color:'#f7f5f0',border:'none',cursor:'default'}}>Staff View</button>
+          <a href="owner.html" style={{flex:1,padding:'5px',borderRadius:'5px',fontSize:'12px',fontWeight:'500',background:'none',color:'rgba(255,255,255,0.35)',border:'none',cursor:'pointer',textDecoration:'none',textAlign:'center',display:'block',transition:'color 0.15s'}} onMouseOver={e=>e.currentTarget.style.color='rgba(255,255,255,0.7)'} onMouseOut={e=>e.currentTarget.style.color='rgba(255,255,255,0.35)'}>Owner</a>
+        </div>
+        <div style={{display:'flex',alignItems:'center',gap:'11px'}}>
+          <div style={{width:'38px',height:'38px',borderRadius:'50%',background:'#2a3a2a',color:'#fff',fontFamily:'var(--serif)',fontWeight:'700',fontSize:'17px',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>{initials}</div>
+          <div>
+            <div style={{color:'#f7f5f0',fontWeight:'500',fontSize:'14px'}}>{name}</div>
+            <div style={{color:'rgba(255,255,255,0.35)',fontSize:'12px'}}>{role}</div>
+          </div>
+        </div>
+      </div>
+      <nav style={{flex:1,padding:'12px 0',overflowY:'auto'}}>
+        {NAV.map(item => {
+          const active = view===item.id;
+          return (
+            <button key={item.id} onClick={()=>setView(item.id)} style={{display:'flex',alignItems:'center',gap:'11px',padding:'10px 28px',color:active?'#f7f5f0':'rgba(255,255,255,0.4)',background:active?'rgba(255,255,255,0.06)':'none',fontSize:'13.5px',fontWeight:active?'500':'400',cursor:'pointer',border:'none',width:'100%',textAlign:'left',borderLeft:active?'2px solid var(--accent)':'2px solid transparent',transition:'all 0.14s'}}>
+              <Ico d={item.d}/> {item.label}
+            </button>
+          );
+        })}
+      </nav>
+      <div style={{padding:'18px 28px',borderTop:'1px solid rgba(255,255,255,0.07)',display:'flex',flexDirection:'column',gap:'10px'}}>
+        <a href="index.html" style={{color:'rgba(255,255,255,0.3)',fontSize:'13px',textDecoration:'none',display:'flex',alignItems:'center',gap:'6px'}}>
+          <Ico d="M19 12H5M12 19l-7-7 7-7" size={14}/> Back to site
+        </a>
+        <button onClick={async()=>{await window.API.signOut();window.location.href='index.html';}} style={{color:'rgba(255,255,255,0.25)',fontSize:'12px',background:'none',border:'none',cursor:'pointer',textAlign:'left',padding:0,display:'flex',alignItems:'center',gap:'6px',fontFamily:'var(--sans)'}}>
+          <Ico d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" size={13}/> Sign Out
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── Status badge ───────────────────────────────────────
+function StatusBadge({status}) {
+  const map = {
+    done:      {bg:'#f0f0f0',color:'#666',label:'Done'},
+    active:    {bg:'#e8f4ea',color:'#2a7a3a',label:'In Chair'},
+    confirmed: {bg:'#eef2ff',color:'#3730a3',label:'Confirmed'},
+    noshow:    {bg:'#fff7ed',color:'#c2410c',label:'No Show'},
+  };
+  const s = map[status]||map.confirmed;
+  return <span style={{fontSize:'11px',padding:'3px 9px',borderRadius:'100px',background:s.bg,color:s.color,fontWeight:'600',whiteSpace:'nowrap'}}>{s.label}</span>;
+}
+
+// ── Today view ─────────────────────────────────────────
+function TodayView({isMobile, schedule, barbers, services, loading, error, onRefresh, user}) {
+  const [appts, setAppts] = useState([]);
+  const [clockedIn, setClockedIn] = useState(false);
+  const [clockStart, setClockStart] = useState(null);
+  const [clockDisplay, setClockDisplay] = useState('');
+  const [dragOver, setDragOver] = useState(null);
+  const dragRef = useRef(null);
+  const [showWalkin, setShowWalkin] = useState(false);
+  const [walkin, setWalkin] = useState({client:'', phone:'', serviceId:'', barberId:''});
+  const [walkinError, setWalkinError] = useState('');
+  const [walkinSaving, setWalkinSaving] = useState(false);
+
+  useEffect(() => {
+    if (schedule) setAppts(schedule.map(fmtAppt));
+  }, [schedule]);
+
+  useEffect(() => {
+    if (!clockedIn || !clockStart) return;
+    const tick = () => {
+      const diff = Date.now() - clockStart;
+      const h = Math.floor(diff / 3600000);
+      const m = Math.floor((diff % 3600000) / 60000);
+      setClockDisplay((h ? h + 'h ' : '') + m + 'm');
+    };
+    tick();
+    const t = setInterval(tick, 30000);
+    return () => clearInterval(t);
+  }, [clockedIn, clockStart]);
+
+  const advanceAppt = async (id) => {
+    const appt = appts.find(a => a.id === id);
+    if (!appt) return;
+    if (appt.status === 'confirmed') {
+      // Check In: local only
+      setAppts(prev => prev.map(a => a.id === id ? {...a, status: 'active'} : a));
+    } else if (appt.status === 'active') {
+      // Complete: call API
+      try {
+        await window.API.setAppointmentStatus(id, 'completed');
+        setAppts(prev => prev.map(a => a.id === id ? {...a, status: 'done'} : a));
+      } catch(e) {
+        alert('Failed to complete appointment: ' + e.message);
+      }
+    }
+  };
+
+  const markNoShow = async (id) => {
+    try {
+      await window.API.setAppointmentStatus(id, 'no_show');
+      setAppts(prev => prev.map(a => a.id === id ? {...a, status: 'noshow'} : a));
+    } catch(e) {
+      alert('Failed to mark no show: ' + e.message);
+    }
+  };
+
+  const addWalkin = async () => {
+    if (!walkin.client) return;
+    setWalkinError('');
+    setWalkinSaving(true);
+    try {
+      const result = await window.API.createWalkIn({
+        customer_name: walkin.client,
+        phone: walkin.phone,
+        service_id: walkin.serviceId,
+        barber_id: walkin.barberId,
+      });
+      const patched = {...result, profiles: {full_name: walkin.client}};
+      setAppts(prev => [...prev, fmtAppt(patched)]);
+      setWalkin({client:'', phone:'', serviceId: services?.[0]?.id || '', barberId: barbers?.[0]?.id || ''});
+      setShowWalkin(false);
+    } catch(e) {
+      setWalkinError(e.message || 'Failed to add walk-in');
+    } finally {
+      setWalkinSaving(false);
+    }
+  };
+
+  // Initialize walk-in form defaults when services/barbers load
+  useEffect(() => {
+    if (services?.length && !walkin.serviceId) {
+      setWalkin(p => ({...p, serviceId: services[0].id}));
+    }
+  }, [services]);
+  useEffect(() => {
+    if (barbers?.length && !walkin.barberId) {
+      setWalkin(p => ({...p, barberId: barbers[0].id}));
+    }
+  }, [barbers]);
+
+  const handleDragStart = id => { dragRef.current = id; };
+  const handleDragOver = (e, id) => { e.preventDefault(); setDragOver(id); };
+  const handleDrop = id => {
+    const fromId = dragRef.current;
+    if (!fromId || fromId === id) { setDragOver(null); return; }
+    const from = appts.findIndex(a => a.id === fromId);
+    const to = appts.findIndex(a => a.id === id);
+    const arr = [...appts];
+    const [item] = arr.splice(from, 1);
+    arr.splice(to, 0, item);
+    setAppts(arr);
+    setDragOver(null);
+    dragRef.current = null;
+  };
+
+  const userName = user?.full_name || user?.email || 'Staff';
+  const userRole = user?.role ? (user.role.charAt(0).toUpperCase() + user.role.slice(1)) : 'Staff';
+
+  if (loading) return (
+    <div>
+      <Skel w='120px' h='30px' r='6px' style={{marginBottom:'8px'}}/>
+      <Skel w='200px' h='14px' r='4px' style={{marginBottom:'20px'}}/>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:'10px',marginBottom:'22px'}}>
+        {[0,1,2,3].map(i=><Skel key={i} h='82px' r='12px'/>)}
+      </div>
+      <Skel h='380px' r='13px'/>
+    </div>
+  );
+
+  const done = appts.filter(a => a.status === 'done').length;
+  const revenue = appts.filter(a => a.status === 'done').reduce((sum, a) => sum + a.price, 0);
+  const barbersOn = (barbers || []).filter(b => b.available).length;
+
+  return (
+    <div>
+      {error && <ErrorBanner message={error} onRetry={onRefresh}/>}
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:'16px'}}>
+        <div>
+          <div style={{fontFamily:'var(--serif)',fontSize:isMobile?'26px':'34px',fontWeight:'700',marginBottom:'2px'}}>Today</div>
+          <div style={{color:'var(--muted)',fontSize:'13px'}}>{new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}</div>
+        </div>
+      </div>
+      <div style={{background:clockedIn?'var(--dark)':'#fff',border:'1px solid '+(clockedIn?'transparent':'var(--beige)'),borderRadius:'12px',padding:'14px 18px',marginBottom:'16px',display:'flex',alignItems:'center',justifyContent:'space-between',transition:'all 0.25s'}}>
+        <div>
+          <div style={{fontSize:'13px',fontWeight:'500',color:clockedIn?'rgba(255,255,255,0.9)':'var(--dark)',marginBottom:'3px'}}>{userName} · {userRole}</div>
+          <div style={{fontSize:'12px',color:clockedIn?'rgba(255,255,255,0.45)':'var(--muted)',display:'flex',alignItems:'center',gap:'6px'}}>
+            {clockedIn ? (
+              <React.Fragment>
+                <span style={{width:'6px',height:'6px',borderRadius:'50%',background:'#4ade80',display:'inline-block',flexShrink:0}}></span>
+                <span>{clockDisplay} in shift</span>
+              </React.Fragment>
+            ) : (
+              <span>Not yet clocked in</span>
+            )}
+          </div>
+        </div>
+        <button onClick={()=>{if(clockedIn){setClockedIn(false);setClockStart(null);setClockDisplay('');}else{setClockedIn(true);setClockStart(Date.now());}}} style={{padding:'8px 18px',borderRadius:'7px',fontSize:'13px',fontWeight:'500',cursor:'pointer',background:clockedIn?'rgba(255,255,255,0.12)':'var(--dark)',color:clockedIn?'rgba(255,255,255,0.9)':'#fff',border:clockedIn?'1px solid rgba(255,255,255,0.2)':'none',transition:'all 0.2s',flexShrink:0}}>
+          {clockedIn ? 'Clock Out' : 'Clock In'}
+        </button>
+      </div>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:'10px',marginBottom:'22px'}}>
+        {[
+          {label:'Total Bookings', val:appts.length, sub:'today'},
+          {label:'Completed', val:done, sub:'of '+appts.length},
+          {label:'Revenue', val:'$'+revenue.toFixed(0), sub:'collected so far'},
+          {label:'Barbers On', val:barbersOn, sub:'active today'},
+        ].map(({label,val,sub}) => (
+          <div key={label} style={{background:'#fff',border:'1px solid var(--beige)',borderRadius:'12px',padding:'15px 16px'}}>
+            <div style={{fontSize:'10px',fontWeight:'600',color:'var(--muted)',letterSpacing:'0.1em',textTransform:'uppercase',marginBottom:'7px'}}>{label}</div>
+            <div style={{fontFamily:'var(--serif)',fontSize:'28px',fontWeight:'700',lineHeight:'1',marginBottom:'3px'}}>{val}</div>
+            <div style={{fontSize:'11px',color:'var(--muted)'}}>{sub}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{background:'#fff',border:'1px solid var(--beige)',borderRadius:'13px',overflow:'hidden'}}>
+        <div style={{padding:'14px 18px',borderBottom:'1px solid var(--beige)',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+          <div style={{display:'flex',alignItems:'center',gap:'10px'}}>
+            <div style={{fontFamily:'var(--serif)',fontSize:'19px',fontWeight:'600'}}>Today's Schedule</div>
+            {!isMobile && <div style={{fontSize:'11px',color:'var(--tan)',userSelect:'none'}}>drag to reorder</div>}
+          </div>
+          <div style={{display:'flex',alignItems:'center',gap:'10px'}}>
+            <div style={{fontSize:'12px',color:'var(--muted)'}}>{appts.filter(a=>a.status==='confirmed').length} remaining</div>
+            <button onClick={()=>setShowWalkin(true)} style={{padding:'6px 13px',background:'var(--accent)',color:'#fff',borderRadius:'6px',fontSize:'12px',fontWeight:'500',border:'none',cursor:'pointer',display:'flex',alignItems:'center',gap:'5px',flexShrink:0}}>
+              <span style={{fontSize:'16px',lineHeight:'1',marginTop:'-1px'}}>+</span> Walk-in
+            </button>
+          </div>
+        </div>
+        {showWalkin && (
+          <div style={{padding:'14px 18px',borderBottom:'1px solid var(--beige)',background:'rgba(139,38,53,0.03)'}}>
+            <div style={{fontFamily:'var(--serif)',fontSize:'15px',fontWeight:'600',marginBottom:'10px'}}>Add Walk-in</div>
+            {walkinError && <ErrorBanner message={walkinError}/>}
+            <div style={{display:'grid',gridTemplateColumns:isMobile?'1fr':'1fr 1fr 1fr 1fr auto',gap:'8px',alignItems:'flex-end'}}>
+              <div>
+                <div style={{fontSize:'10px',fontWeight:'600',color:'var(--muted)',letterSpacing:'0.1em',textTransform:'uppercase',marginBottom:'3px'}}>Client Name</div>
+                <input value={walkin.client} onChange={e=>setWalkin(p=>({...p,client:e.target.value}))} placeholder="Name" style={{width:'100%',padding:'7px 10px',border:'1.5px solid var(--beige)',borderRadius:'6px',fontSize:'13px',color:'var(--dark)',background:'#fff',outline:'none'}}/>
+              </div>
+              <div>
+                <div style={{fontSize:'10px',fontWeight:'600',color:'var(--muted)',letterSpacing:'0.1em',textTransform:'uppercase',marginBottom:'3px'}}>Phone</div>
+                <input value={walkin.phone} onChange={e=>setWalkin(p=>({...p,phone:e.target.value}))} placeholder="Optional" style={{width:'100%',padding:'7px 10px',border:'1.5px solid var(--beige)',borderRadius:'6px',fontSize:'13px',color:'var(--dark)',background:'#fff',outline:'none'}}/>
+              </div>
+              <div>
+                <div style={{fontSize:'10px',fontWeight:'600',color:'var(--muted)',letterSpacing:'0.1em',textTransform:'uppercase',marginBottom:'3px'}}>Service</div>
+                <select value={walkin.serviceId} onChange={e=>setWalkin(p=>({...p,serviceId:e.target.value}))} style={{width:'100%',padding:'7px 10px',border:'1.5px solid var(--beige)',borderRadius:'6px',fontSize:'13px',color:'var(--dark)',background:'#fff',outline:'none'}}>
+                  {(services||[]).map(s=><option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <div style={{fontSize:'10px',fontWeight:'600',color:'var(--muted)',letterSpacing:'0.1em',textTransform:'uppercase',marginBottom:'3px'}}>Barber</div>
+                <select value={walkin.barberId} onChange={e=>setWalkin(p=>({...p,barberId:e.target.value}))} style={{width:'100%',padding:'7px 10px',border:'1.5px solid var(--beige)',borderRadius:'6px',fontSize:'13px',color:'var(--dark)',background:'#fff',outline:'none'}}>
+                  {(barbers||[]).map(b=><option key={b.id} value={b.id}>{b.name}</option>)}
+                </select>
+              </div>
+              <div style={{display:'flex',gap:'6px'}}>
+                <button onClick={addWalkin} disabled={walkinSaving} style={{padding:'7px 16px',background:'var(--dark)',color:'#fff',borderRadius:'6px',fontSize:'13px',fontWeight:'500',border:'none',cursor:'pointer',whiteSpace:'nowrap',opacity:walkinSaving?0.6:1}}>{walkinSaving?'Adding…':'Add'}</button>
+                <button onClick={()=>{setShowWalkin(false);setWalkinError('');}} style={{padding:'7px 12px',border:'1.5px solid var(--tan)',borderRadius:'6px',fontSize:'13px',color:'var(--muted)',background:'none',cursor:'pointer'}}>✕</button>
+              </div>
+            </div>
+          </div>
+        )}
+        {!isMobile && (
+          <div style={{display:'grid',gridTemplateColumns:'20px 88px 1fr 110px 90px 100px',gap:'12px',padding:'9px 20px',background:'var(--beige)',fontSize:'10px',fontWeight:'600',color:'var(--muted)',letterSpacing:'0.08em',textTransform:'uppercase'}}>
+            <div></div><div>Time</div><div>Client</div><div>Barber</div><div>Status</div><div></div>
+          </div>
+        )}
+        {appts.length === 0 && !loading && (
+          <div style={{padding:'32px',textAlign:'center',color:'var(--muted)',fontSize:'14px'}}>No appointments today</div>
+        )}
+        {appts.map((a,i) => (
+          <div key={a.id}
+            draggable={!isMobile}
+            onDragStart={!isMobile?()=>handleDragStart(a.id):undefined}
+            onDragOver={!isMobile?(e)=>handleDragOver(e,a.id):undefined}
+            onDrop={!isMobile?()=>handleDrop(a.id):undefined}
+            onDragEnd={()=>{dragRef.current=null;setDragOver(null);}}
+            style={{borderBottom:i<appts.length-1?'1px solid var(--beige)':'none',background:dragOver===a.id?'rgba(139,38,53,0.07)':a.status==='active'?'rgba(139,38,53,0.03)':'transparent',transition:'background 0.15s',cursor:!isMobile?'grab':'auto'}}>
+            {isMobile ? (
+              <div style={{padding:'13px 16px'}}>
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'3px'}}>
+                  <span style={{fontSize:'12px',fontWeight:'500',color:a.status==='done'?'var(--tan)':'var(--muted)'}}>{a.time}</span>
+                  <StatusBadge status={a.status}/>
+                </div>
+                <div style={{fontSize:'15px',fontWeight:'500',color:a.status==='done'?'var(--muted)':'var(--dark)',marginBottom:'2px'}}>{a.client}</div>
+                <div style={{fontSize:'12px',color:'var(--muted)',marginBottom:a.status!=='done'&&a.status!=='noshow'?'9px':'0'}}>{a.service} · {a.barber} · {a.duration}min</div>
+                {a.status!=='done'&&a.status!=='noshow'&&(
+                  <div style={{display:'flex',gap:'8px',alignItems:'center'}}>
+                    <button onClick={()=>advanceAppt(a.id)} style={{padding:'7px 16px',fontSize:'12px',border:'1.5px solid var(--tan)',borderRadius:'6px',color:'var(--muted)',cursor:'pointer',background:'none'}}>
+                      {a.status==='confirmed'?'Check In':'Complete'}
+                    </button>
+                    {a.status==='confirmed'&&(
+                      <button onClick={()=>markNoShow(a.id)} style={{fontSize:'11px',color:'#c2410c',cursor:'pointer',background:'none',border:'none',opacity:0.7}}>no show</button>
+                    )}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div style={{display:'grid',gridTemplateColumns:'20px 88px 1fr 110px 90px 100px',alignItems:'center',gap:'12px',padding:'12px 20px'}}>
+                <div style={{color:'var(--tan)',fontSize:'15px',userSelect:'none',textAlign:'center'}}>⠿</div>
+                <div style={{fontSize:'13px',fontWeight:'500',color:a.status==='done'?'var(--tan)':'var(--dark)'}}>{a.time}</div>
+                <div>
+                  <div style={{fontSize:'14px',fontWeight:'500',color:a.status==='done'?'var(--muted)':'var(--dark)'}}>{a.client}</div>
+                  <div style={{fontSize:'12px',color:'var(--muted)'}}>{a.service} · {a.duration}min</div>
+                </div>
+                <div style={{fontSize:'13px',color:'var(--muted)'}}>{a.barber}</div>
+                <StatusBadge status={a.status}/>
+                <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:'5px'}}>
+                  {a.status!=='done'&&a.status!=='noshow'&&(
+                    <button onClick={()=>advanceAppt(a.id)} style={{padding:'5px 12px',fontSize:'12px',border:'1.5px solid var(--tan)',borderRadius:'5px',color:'var(--muted)',cursor:'pointer',background:'none',whiteSpace:'nowrap'}}>
+                      {a.status==='confirmed'?'Check In':'Complete'}
+                    </button>
+                  )}
+                  {a.status==='confirmed'&&(
+                    <button onClick={()=>markNoShow(a.id)} style={{fontSize:'11px',color:'#c2410c',cursor:'pointer',background:'none',border:'none',opacity:0.6,padding:'0'}}>no show</button>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Services view ──────────────────────────────────────
+function ServicesView({isMobile, services: propServices, loading, error, onRefresh}) {
+  const [services, setServices] = useState([]);
+  const [editing, setEditing] = useState(null);
+  const [adding, setAdding] = useState(false);
+  const [newSvc, setNewSvc] = useState({name:'',price:'',duration:''});
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (propServices) setServices(propServices);
+  }, [propServices]);
+
+  const saveEdit = async () => {
+    setSaving(true);
+    try {
+      await window.API.updateService(editing.id, {
+        name: editing.name,
+        price: Math.round(editing.price * 100),
+        duration: editing.duration,
+      });
+      await onRefresh();
+      setEditing(null);
+    } catch(e) {
+      alert('Failed to update service: ' + e.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const deleteSvc = async (id) => {
+    if (!confirm('Delete this service?')) return;
+    try {
+      await window.API.deleteService(id);
+      await onRefresh();
+    } catch(e) {
+      alert('Failed to delete service: ' + e.message);
+    }
+  };
+
+  const addSvc = async () => {
+    if (!newSvc.name || !newSvc.price) return;
+    setSaving(true);
+    try {
+      await window.API.createService({
+        name: newSvc.name,
+        price: Math.round(Number(newSvc.price) * 100),
+        duration: Number(newSvc.duration) || 30,
+      });
+      await onRefresh();
+      setNewSvc({name:'',price:'',duration:''});
+      setAdding(false);
+    } catch(e) {
+      alert('Failed to add service: ' + e.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const inp = {padding:'7px 10px',border:'1.5px solid var(--beige)',borderRadius:'6px',fontSize:'13px',color:'var(--dark)',background:'var(--cream)',outline:'none',width:'100%'};
+
+  if (loading) return (
+    <div>
+      <Skel w='120px' h='30px' r='6px' style={{marginBottom:'8px'}}/>
+      <Skel w='200px' h='14px' r='4px' style={{marginBottom:'20px'}}/>
+      <Skel h='300px' r='13px'/>
+    </div>
+  );
+
+  return (
+    <div>
+      {error && <ErrorBanner message={error} onRetry={onRefresh}/>}
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'20px'}}>
+        <div>
+          <div style={{fontFamily:'var(--serif)',fontSize:isMobile?'26px':'34px',fontWeight:'700',marginBottom:'2px'}}>Services</div>
+          <div style={{color:'var(--muted)',fontSize:'13px'}}>Manage your service menu and pricing</div>
+        </div>
+        <button onClick={()=>setAdding(true)} style={{padding:'9px 16px',background:'var(--dark)',color:'#fff',borderRadius:'7px',fontSize:'13px',fontWeight:'500',border:'none',cursor:'pointer',display:'flex',alignItems:'center',gap:'6px',flexShrink:0}}>
+          <Ico d="M12 5v14M5 12h14" size={13}/>{isMobile?'Add':'Add Service'}
+        </button>
+      </div>
+
+      {adding && (
+        <div style={{background:'#fff',border:'1.5px solid var(--accent)',borderRadius:'12px',padding:'18px 20px',marginBottom:'12px'}}>
+          <div style={{fontFamily:'var(--serif)',fontSize:'17px',fontWeight:'600',marginBottom:'12px'}}>New Service</div>
+          <div style={{display:'grid',gridTemplateColumns:isMobile?'1fr':'1fr 100px 110px',gap:'10px',marginBottom:'12px'}}>
+            <div>
+              <div style={{fontSize:'10px',fontWeight:'600',color:'var(--muted)',letterSpacing:'0.1em',textTransform:'uppercase',marginBottom:'4px'}}>Name</div>
+              <input style={inp} placeholder="e.g. Buzz Cut" value={newSvc.name} onChange={e=>setNewSvc(p=>({...p,name:e.target.value}))}/>
+            </div>
+            <div>
+              <div style={{fontSize:'10px',fontWeight:'600',color:'var(--muted)',letterSpacing:'0.1em',textTransform:'uppercase',marginBottom:'4px'}}>Price ($)</div>
+              <input style={inp} type="number" placeholder="35" value={newSvc.price} onChange={e=>setNewSvc(p=>({...p,price:e.target.value}))}/>
+            </div>
+            <div>
+              <div style={{fontSize:'10px',fontWeight:'600',color:'var(--muted)',letterSpacing:'0.1em',textTransform:'uppercase',marginBottom:'4px'}}>Duration (min)</div>
+              <input style={inp} type="number" placeholder="30" value={newSvc.duration} onChange={e=>setNewSvc(p=>({...p,duration:e.target.value}))}/>
+            </div>
+          </div>
+          <div style={{display:'flex',gap:'8px'}}>
+            <button onClick={addSvc} disabled={saving} style={{padding:'8px 18px',background:'var(--dark)',color:'#fff',borderRadius:'6px',fontSize:'13px',fontWeight:'500',border:'none',cursor:'pointer',opacity:saving?0.6:1}}>{saving?'Saving…':'Save Service'}</button>
+            <button onClick={()=>setAdding(false)} style={{padding:'8px 16px',border:'1.5px solid var(--tan)',borderRadius:'6px',fontSize:'13px',color:'var(--muted)',background:'none',cursor:'pointer'}}>Cancel</button>
+          </div>
+        </div>
+      )}
+
+      <div style={{background:'#fff',border:'1px solid var(--beige)',borderRadius:'13px',overflow:'hidden'}}>
+        {!isMobile && (
+          <div style={{display:'grid',gridTemplateColumns:'1fr 90px 110px 100px',gap:'12px',padding:'10px 22px',background:'var(--beige)',fontSize:'10px',fontWeight:'600',color:'var(--muted)',letterSpacing:'0.1em',textTransform:'uppercase'}}>
+            <div>Service</div><div>Price</div><div>Duration</div><div></div>
+          </div>
+        )}
+        {services.length === 0 && (
+          <div style={{padding:'32px',textAlign:'center',color:'var(--muted)',fontSize:'14px'}}>No services found</div>
+        )}
+        {services.map((svc,i) => {
+          const displayPrice = Math.round(svc.price / 100);
+          return (
+            <div key={svc.id} style={{borderBottom:i<services.length-1?'1px solid var(--beige)':'none'}}>
+              {editing?.id===svc.id ? (
+                isMobile ? (
+                  <div style={{padding:'14px 16px',display:'flex',flexDirection:'column',gap:'8px',background:'rgba(139,38,53,0.02)'}}>
+                    <input style={inp} value={editing.name} onChange={e=>setEditing(p=>({...p,name:e.target.value}))}/>
+                    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'8px'}}>
+                      <input style={inp} type="number" value={editing.price} onChange={e=>setEditing(p=>({...p,price:Number(e.target.value)}))}/>
+                      <input style={inp} type="number" value={editing.duration} onChange={e=>setEditing(p=>({...p,duration:Number(e.target.value)}))}/>
+                    </div>
+                    <div style={{display:'flex',gap:'6px'}}>
+                      <button onClick={saveEdit} disabled={saving} style={{padding:'7px 16px',background:'var(--dark)',color:'#fff',borderRadius:'5px',fontSize:'12px',border:'none',cursor:'pointer',opacity:saving?0.6:1}}>{saving?'Saving…':'Save'}</button>
+                      <button onClick={()=>setEditing(null)} style={{padding:'7px 12px',border:'1.5px solid var(--tan)',borderRadius:'5px',fontSize:'12px',color:'var(--muted)',background:'none',cursor:'pointer'}}>✕</button>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{display:'grid',gridTemplateColumns:'1fr 90px 110px 100px',gap:'10px',padding:'12px 22px',alignItems:'center',background:'rgba(139,38,53,0.02)'}}>
+                    <input style={inp} value={editing.name} onChange={e=>setEditing(p=>({...p,name:e.target.value}))}/>
+                    <input style={inp} type="number" value={editing.price} onChange={e=>setEditing(p=>({...p,price:Number(e.target.value)}))}/>
+                    <input style={inp} type="number" value={editing.duration} onChange={e=>setEditing(p=>({...p,duration:Number(e.target.value)}))}/>
+                    <div style={{display:'flex',gap:'6px'}}>
+                      <button onClick={saveEdit} disabled={saving} style={{padding:'5px 12px',background:'var(--dark)',color:'#fff',borderRadius:'5px',fontSize:'12px',border:'none',cursor:'pointer',opacity:saving?0.6:1}}>{saving?'…':'Save'}</button>
+                      <button onClick={()=>setEditing(null)} style={{padding:'5px 10px',border:'1.5px solid var(--tan)',borderRadius:'5px',fontSize:'12px',color:'var(--muted)',background:'none',cursor:'pointer'}}>✕</button>
+                    </div>
+                  </div>
+                )
+              ) : (
+                isMobile ? (
+                  <div style={{padding:'14px 16px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                    <div>
+                      <div style={{fontWeight:'500',fontSize:'14.5px',marginBottom:'2px'}}>{svc.name}</div>
+                      <div style={{fontSize:'12px',color:'var(--muted)'}}>{svc.duration} min</div>
+                    </div>
+                    <div style={{display:'flex',alignItems:'center',gap:'12px'}}>
+                      <div style={{fontFamily:'var(--serif)',fontSize:'20px',fontWeight:'700',color:'var(--accent)'}}>${displayPrice}</div>
+                      <div style={{display:'flex',gap:'6px'}}>
+                        <button onClick={()=>setEditing({...svc, price: svc.price/100})} style={{padding:'6px 12px',border:'1.5px solid var(--tan)',borderRadius:'5px',fontSize:'12px',color:'var(--muted)',background:'none',cursor:'pointer'}}>Edit</button>
+                        <button onClick={()=>deleteSvc(svc.id)} style={{padding:'6px 10px',border:'1.5px solid #e0aaaa',borderRadius:'5px',fontSize:'12px',color:'var(--accent)',background:'none',cursor:'pointer'}}>✕</button>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{display:'grid',gridTemplateColumns:'1fr 90px 110px 100px',gap:'12px',padding:'14px 22px',alignItems:'center'}}>
+                    <div style={{fontWeight:'500',fontSize:'14.5px'}}>{svc.name}</div>
+                    <div style={{fontFamily:'var(--serif)',fontSize:'18px',fontWeight:'700',color:'var(--accent)'}}>${displayPrice}</div>
+                    <div style={{fontSize:'13px',color:'var(--muted)'}}>{svc.duration} min</div>
+                    <div style={{display:'flex',gap:'8px'}}>
+                      <button onClick={()=>setEditing({...svc, price: svc.price/100})} style={{padding:'5px 12px',border:'1.5px solid var(--tan)',borderRadius:'5px',fontSize:'12px',color:'var(--muted)',background:'none',cursor:'pointer'}}>Edit</button>
+                      <button onClick={()=>deleteSvc(svc.id)} style={{padding:'5px 10px',border:'1.5px solid #e0aaaa',borderRadius:'5px',fontSize:'12px',color:'var(--accent)',background:'none',cursor:'pointer'}}>✕</button>
+                    </div>
+                  </div>
+                )
+              )}
+            </div>
+          );
+        })}
+      </div>
+      <div style={{marginTop:'12px',padding:'13px 16px',background:'var(--beige)',borderRadius:'9px',fontSize:'12px',color:'var(--muted)',lineHeight:'1.5'}}>
+        Changes to services apply to new bookings only. Existing bookings retain their original pricing.
+      </div>
+    </div>
+  );
+}
+
+// ── Team view ──────────────────────────────────────────
+function TeamView({isMobile, barbers: propBarbers, schedule, loading, error, onRefresh}) {
+  const [barbers, setBarbers] = useState([]);
+  const [toggling, setToggling] = useState(null);
+
+  useEffect(() => {
+    if (propBarbers) setBarbers(propBarbers);
+  }, [propBarbers]);
+
+  const toggle = async (id, currentAvailable) => {
+    setToggling(id);
+    try {
+      await window.API.setBarberAvailability(id, !currentAvailable);
+      await onRefresh();
+    } catch(e) {
+      if (e.message && e.message.includes('403')) {
+        // Staff can't toggle — silently ignore or show subtle message
+      } else {
+        alert('Failed to update availability: ' + e.message);
+      }
+    } finally {
+      setToggling(null);
+    }
+  };
+
+  if (loading) return (
+    <div>
+      <Skel w='120px' h='30px' r='6px' style={{marginBottom:'8px'}}/>
+      <Skel w='250px' h='14px' r='4px' style={{marginBottom:'20px'}}/>
+      {[0,1,2].map(i=><Skel key={i} h='100px' r='13px' style={{marginBottom:'10px'}}/>)}
+    </div>
+  );
+
+  // Count appointments per barber from schedule
+  const apptsByBarber = {};
+  (schedule || []).forEach(a => {
+    const bid = a.barber_id || (a.barberId);
+    if (bid) apptsByBarber[bid] = (apptsByBarber[bid] || 0) + 1;
+  });
+
+  return (
+    <div>
+      {error && <ErrorBanner message={error} onRetry={onRefresh}/>}
+      <div style={{fontFamily:'var(--serif)',fontSize:isMobile?'26px':'34px',fontWeight:'700',marginBottom:'4px'}}>Team</div>
+      <div style={{color:'var(--muted)',fontSize:'13px',marginBottom:'20px'}}>Manage your barbers and their availability</div>
+      <div style={{display:'flex',flexDirection:'column',gap:'10px',marginBottom:'16px'}}>
+        {barbers.map(member => {
+          const working = member.available;
+          const initials = (member.name || '?')[0].toUpperCase();
+          const todayCount = apptsByBarber[member.id] || 0;
+          return (
+            <div key={member.id} style={{background:'#fff',border:`1px solid ${working?'var(--beige)':'var(--tan)'}`,borderRadius:'13px',padding:'18px 20px',display:'flex',alignItems:'center',gap:'16px',opacity:working?1:0.7,transition:'all 0.2s'}}>
+              <div style={{width:'48px',height:'48px',borderRadius:'50%',background:working?'var(--accent)':'var(--tan)',color:'#fff',fontFamily:'var(--serif)',fontWeight:'700',fontSize:'20px',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,transition:'background 0.2s'}}>{initials}</div>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontFamily:'var(--serif)',fontSize:'19px',fontWeight:'600',marginBottom:'2px'}}>{member.name}</div>
+                <div style={{display:'flex',gap:'12px',fontSize:'12px',color:'var(--muted)',flexWrap:'wrap'}}>
+                  <span>{todayCount} appts today</span>
+                </div>
+              </div>
+              <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:'6px',flexShrink:0}}>
+                <div style={{fontSize:'11px',color:'var(--muted)'}}>{working?'Working':'Off today'}</div>
+                <button
+                  onClick={()=>toggle(member.id, working)}
+                  disabled={toggling===member.id}
+                  style={{width:'44px',height:'24px',borderRadius:'12px',background:working?'var(--accent)':'var(--tan)',position:'relative',cursor:'pointer',transition:'background 0.2s',border:'none',opacity:toggling===member.id?0.5:1}}>
+                  <div style={{position:'absolute',top:'4px',left:working?'22px':'4px',width:'16px',height:'16px',borderRadius:'50%',background:'#fff',transition:'left 0.2s'}}/>
+                </button>
+              </div>
+            </div>
+          );
+        })}
+        {barbers.length === 0 && (
+          <div style={{padding:'32px',textAlign:'center',color:'var(--muted)',fontSize:'14px'}}>No barbers found</div>
+        )}
+      </div>
+      <div style={{padding:'18px 20px',background:'#fff',border:'1px solid var(--beige)',borderRadius:'13px'}}>
+        <div style={{fontFamily:'var(--serif)',fontSize:'17px',fontWeight:'600',marginBottom:'12px'}}>Today at a Glance</div>
+        <div style={{display:'grid',gridTemplateColumns:`repeat(${Math.max(barbers.length,1)},1fr)`,gap:'10px'}}>
+          {barbers.map(m => {
+            const todayCount = apptsByBarber[m.id] || 0;
+            return (
+              <div key={m.id} style={{padding:'12px',background:'var(--cream)',borderRadius:'9px',textAlign:'center',opacity:m.available?1:0.5}}>
+                <div style={{fontFamily:'var(--serif)',fontSize:'24px',fontWeight:'700',color:'var(--accent)'}}>{m.available?todayCount:0}</div>
+                <div style={{fontSize:'13px',fontWeight:'500',color:'var(--dark)',marginTop:'2px'}}>{m.name}</div>
+                <div style={{fontSize:'11px',color:'var(--muted)'}}>{m.available?'bookings':'off today'}</div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Customers view ─────────────────────────────────────
+function CustomersView({isMobile}) {
+  const [q, setQ] = useState('');
+  const [customers, setCustomers] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const searchTimeout = useRef(null);
+
+  const loadCustomers = async (query) => {
+    setLoading(true);
+    setError('');
+    try {
+      const data = await window.API.getCustomers(query || '');
+      setCustomers(data || []);
+    } catch(e) {
+      setError('Failed to load customers: ' + e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadCustomers('');
+  }, []);
+
+  const handleSearch = (val) => {
+    setQ(val);
+    clearTimeout(searchTimeout.current);
+    searchTimeout.current = setTimeout(() => loadCustomers(val), 350);
+  };
+
+  return (
+    <div>
+      <div style={{fontFamily:'var(--serif)',fontSize:isMobile?'26px':'34px',fontWeight:'700',marginBottom:'4px'}}>Customers</div>
+      <div style={{color:'var(--muted)',fontSize:'13px',marginBottom:'16px'}}>{customers.length} customers{q ? ' found' : ' total'}</div>
+      {error && <ErrorBanner message={error} onRetry={()=>loadCustomers(q)}/>}
+      <div style={{position:'relative',marginBottom:'14px'}}>
+        <div style={{position:'absolute',left:'12px',top:'50%',transform:'translateY(-50%)',color:'var(--muted)',pointerEvents:'none'}}>
+          <Ico d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" size={15}/>
+        </div>
+        <input value={q} onChange={e=>handleSearch(e.target.value)} placeholder="Search by name or phone…" style={{width:'100%',padding:'10px 13px 10px 36px',border:'1.5px solid var(--beige)',borderRadius:'8px',fontSize:'14px',color:'var(--dark)',background:'#fff',outline:'none'}}/>
+      </div>
+      <div style={{background:'#fff',border:'1px solid var(--beige)',borderRadius:'13px',overflow:'hidden'}}>
+        {!isMobile && (
+          <div style={{display:'grid',gridTemplateColumns:'1fr 130px 70px 80px',gap:'12px',padding:'10px 20px',background:'var(--beige)',fontSize:'10px',fontWeight:'600',color:'var(--muted)',letterSpacing:'0.1em',textTransform:'uppercase'}}>
+            <div>Name</div><div>Phone</div><div>Visits</div><div>Points</div>
+          </div>
+        )}
+        {loading && (
+          <div style={{padding:'20px 20px',display:'flex',flexDirection:'column',gap:'8px'}}>
+            {[0,1,2,3].map(i=><Skel key={i} h='42px' r='6px'/>)}
+          </div>
+        )}
+        {!loading && customers.length===0 && (
+          <div style={{padding:'32px',textAlign:'center',color:'var(--muted)',fontSize:'14px'}}>No customers found</div>
+        )}
+        {!loading && customers.map((c,i) => (
+          isMobile ? (
+            <div key={c.id} style={{padding:'12px 16px',borderBottom:i<customers.length-1?'1px solid var(--beige)':'none',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+              <div>
+                <div style={{fontWeight:'500',fontSize:'14px',marginBottom:'2px'}}>{c.full_name}</div>
+                <div style={{fontSize:'12px',color:'var(--muted)'}}>{c.phone} · {c.loyalty_tier || '—'}</div>
+              </div>
+              <div style={{textAlign:'right'}}>
+                <div style={{fontFamily:'var(--serif)',fontSize:'20px',fontWeight:'700',color:'var(--accent)'}}>{c.loyalty_points || 0}</div>
+                <div style={{fontSize:'10px',color:'var(--muted)'}}>pts</div>
+              </div>
+            </div>
+          ) : (
+            <div key={c.id} style={{display:'grid',gridTemplateColumns:'1fr 130px 70px 80px',gap:'12px',padding:'13px 20px',borderBottom:i<customers.length-1?'1px solid var(--beige)':'none',alignItems:'center'}}>
+              <div style={{fontWeight:'500',fontSize:'14px'}}>{c.full_name}</div>
+              <div style={{fontSize:'13px',color:'var(--muted)'}}>{c.phone || '—'}</div>
+              <div style={{fontSize:'14px',fontWeight:'500'}}>{c.loyalty_tier || '—'}</div>
+              <div style={{fontFamily:'var(--serif)',fontSize:'15px',fontWeight:'700',color:'var(--accent)'}}>{c.loyalty_points || 0}</div>
+            </div>
+          )
+        ))}
+      </div>
+    </div>
+  );
+}
+
+
+// ── App ────────────────────────────────────────────────
+function App() {
+  const isMobile = useIsMobile();
+  const [view, setView] = useState('today');
+  const [user, setUser] = useState(null);
+  const [authReady, setAuthReady] = useState(false);
+
+  // Shared data state
+  const [schedule, setSchedule] = useState(null);
+  const [barbers, setBarbers] = useState(null);
+  const [services, setServices] = useState(null);
+  const [dataLoading, setDataLoading] = useState(true);
+  const [dataError, setDataError] = useState('');
+
+  const loadData = async () => {
+    setDataLoading(true);
+    setDataError('');
+    try {
+      const [sched, barbs, svcs] = await Promise.all([
+        window.API.getSchedule(),
+        window.API.getBarbers(),
+        window.API.getServices(),
+      ]);
+      setSchedule(sched || []);
+      setBarbers(barbs || []);
+      setServices(svcs || []);
+    } catch(e) {
+      setDataError('Failed to load dashboard data: ' + e.message);
+    } finally {
+      setDataLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    window.API.supabase().auth.getSession().then(async ({ data: { session } }) => {
+      if (!session) { window.location.href = 'index.html'; return; }
+      try {
+        const me = await window.API.getMe();
+        if (!['staff','owner'].includes(me.role)) { window.location.href = 'portal.html'; return; }
+        setUser(me);
+      } catch(e) { window.location.href = 'index.html'; return; }
+      setAuthReady(true);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (authReady) loadData();
+  }, [authReady]);
+
+  if (!authReady) return (
+    <div style={{height:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:'var(--cream)',flexDirection:'column',gap:'12px'}}>
+      <div style={{fontFamily:'var(--serif)',fontSize:'22px',color:'var(--dark)'}}>Harbour Barbers</div>
+      <div style={{fontSize:'13px',color:'var(--muted)'}}>Loading dashboard…</div>
+    </div>
+  );
+
+  const commonProps = {
+    isMobile,
+    loading: dataLoading,
+    error: dataError,
+    onRefresh: loadData,
+  };
+
+  const renderView = () => {
+    switch(view) {
+      case 'today':
+        return <TodayView {...commonProps} schedule={schedule} barbers={barbers} services={services} user={user}/>;
+      case 'services':
+        return <ServicesView {...commonProps} services={services}/>;
+      case 'team':
+        return <TeamView {...commonProps} barbers={barbers} schedule={schedule}/>;
+      case 'customers':
+        return <CustomersView isMobile={isMobile}/>;
+      default:
+        return <TodayView {...commonProps} schedule={schedule} barbers={barbers} services={services} user={user}/>;
+    }
+  };
+
+  return (
+    <div style={{display:'flex',flexDirection:'column',height:'100vh',overflow:'hidden'}}>
+      {isMobile && <MobileHeader user={user}/>}
+      <div style={{display:'flex',flex:1,overflow:'hidden'}}>
+        {!isMobile && <Sidebar view={view} setView={setView} user={user}/>}
+        <main style={{flex:1,overflowY:'auto',background:'var(--cream)',padding:isMobile?'20px 16px':'44px 52px'}}>
+          {renderView()}
+        </main>
+      </div>
+      {isMobile && <MobileNav view={view} setView={setView}/>}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

@@ -1,0 +1,2813 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Harbour Barbers</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400;1,600&family=Bebas+Neue&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --cream:  #f7f5f0;
+      --beige:  #eeebe4;
+      --tan:    #ccc7be;
+      --accent: #8b2635;
+      --dark:   #18181a;
+      --muted:  #6a6560;
+      --strip:  #f0e8e8;
+      --serif:  'Cormorant Garamond', Georgia, serif;
+      --sans:   'DM Sans', system-ui, sans-serif;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--sans);
+      background: var(--cream);
+      color: var(--dark);
+      font-size: 16px;
+      line-height: 1.6;
+    }
+
+    /* ── NAV ─────────────────────────────────────────── */
+    nav {
+      position: fixed;
+      inset: 0 0 auto 0;
+      z-index: 200;
+      height: 68px;
+      background: transparent;
+      border-bottom: 1px solid transparent;
+      display: flex;
+      align-items: center;
+      padding: 0 48px;
+      justify-content: space-between;
+      transition: background 0.42s ease, border-color 0.42s ease;
+    }
+
+    nav.scrolled {
+      background: rgba(255,255,255,0.18);
+      backdrop-filter: blur(24px) saturate(1.8);
+      -webkit-backdrop-filter: blur(24px) saturate(1.8);
+      border-bottom: 1px solid rgba(255,255,255,0.28);
+      box-shadow: 0 1px 0 rgba(255,255,255,0.45) inset, 0 4px 24px rgba(0,0,0,0.08);
+    }
+
+    nav.scrolled .nav-logo { color: var(--dark); }
+    nav.scrolled .nav-links a { color: var(--muted); }
+    nav.scrolled .nav-links a:hover { color: var(--dark); }
+
+    .nav-auth {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-left: 28px;
+    }
+
+    .nav-signin {
+      font-size: 13.5px;
+      font-weight: 400;
+      color: rgba(255,255,255,0.75);
+      text-decoration: none;
+      letter-spacing: 0.02em;
+      transition: color 0.2s;
+      cursor: pointer;
+      background: none;
+      border: none;
+      font-family: var(--sans);
+      padding: 0;
+    }
+
+    .nav-signin:hover { color: #fff; }
+    nav.scrolled .nav-signin { color: var(--muted); }
+    nav.scrolled .nav-signin:hover { color: var(--dark); }
+
+    .nav-join {
+      font-size: 13px;
+      font-weight: 500;
+      color: #fff;
+      background: var(--accent);
+      border: none;
+      border-radius: 100px;
+      padding: 8px 18px;
+      cursor: pointer;
+      font-family: var(--sans);
+      letter-spacing: 0.02em;
+      text-decoration: none;
+      transition: background 0.2s, transform 0.15s;
+    }
+
+    .nav-join:hover { background: #6e1e2a; transform: translateY(-1px); }
+    nav.scrolled .nav-join { background: var(--accent); color: #fff; }
+
+    /* ── PANEL LOYALTY PROMPT ─────────────────────────── */
+    .panel-loyalty-prompt {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: rgba(30,20,20,0.55);
+      margin-top: 8px;
+      line-height: 1.5;
+      justify-content: center;
+    }
+
+    .panel-loyalty-prompt svg {
+      flex-shrink: 0;
+      margin-top: 1px;
+      color: var(--accent);
+    }
+
+    .panel-loyalty-link {
+      background: none;
+      border: none;
+      color: var(--accent);
+      font-size: 12px;
+      font-family: var(--sans);
+      cursor: pointer;
+      padding: 0;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+      font-weight: 500;
+    }
+
+    /* ── LOYALTY STRIP ─────────────────────────────────── */
+    .loyalty-strip {
+      background: #18100f;
+      border-top: 1px solid rgba(139,38,53,0.2);
+      border-bottom: 1px solid rgba(139,38,53,0.2);
+      padding: 36px 48px;
+    }
+
+    .loyalty-strip-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 40px;
+    }
+
+    .loyalty-strip-left {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .loyalty-strip-icon {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      background: rgba(139,38,53,0.15);
+      border: 1px solid rgba(139,38,53,0.35);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--accent);
+      flex-shrink: 0;
+    }
+
+    .loyalty-strip-title {
+      font-family: var(--serif);
+      font-size: 19px;
+      color: #fff;
+      margin-bottom: 4px;
+    }
+
+    .loyalty-strip-sub {
+      font-size: 13px;
+      color: rgba(255,255,255,0.45);
+      line-height: 1.5;
+    }
+
+    .loyalty-strip-right {
+      display: flex;
+      align-items: center;
+      gap: 32px;
+      flex-shrink: 0;
+    }
+
+    .loyalty-perks {
+      display: flex;
+      gap: 24px;
+    }
+
+    .loyalty-perk {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+    }
+
+    .perk-num {
+      font-family: var(--serif);
+      font-size: 20px;
+      color: var(--accent);
+      line-height: 1;
+    }
+
+    .perk-label {
+      font-size: 11px;
+      color: rgba(255,255,255,0.4);
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      white-space: nowrap;
+    }
+
+    .loyalty-cta {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 100px;
+      padding: 12px 28px;
+      font-family: var(--sans);
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.15s;
+      white-space: nowrap;
+    }
+
+    .loyalty-cta:hover { background: #6e1e2a; transform: translateY(-1px); }
+
+    .nav-logo {
+      font-family: var(--serif);
+      font-size: 21px;
+      font-weight: 600;
+      color: #fff;
+      text-decoration: none;
+      letter-spacing: -0.01em;
+      transition: color 0.42s ease;
+    }
+
+    .nav-logo span { color: var(--accent); }
+    nav.scrolled .nav-logo { color: var(--dark); }
+
+    .nav-links {
+      display: flex;
+      gap: 36px;
+      list-style: none;
+      align-items: center;
+    }
+
+    .nav-links a {
+      font-size: 14px;
+      font-weight: 400;
+      color: rgba(255,255,255,0.8);
+      text-decoration: none;
+      letter-spacing: 0.02em;
+      transition: color 0.22s;
+    }
+
+    .nav-links a:hover { color: #fff; }
+    nav.scrolled .nav-links a { color: var(--muted); }
+    nav.scrolled .nav-links a:hover { color: var(--dark); }
+
+    /* ── PHOTO PLACEHOLDER ───────────────────────────── */
+    .photo-ph {
+      background: repeating-linear-gradient(
+        -45deg,
+        var(--tan) 0px, var(--tan) 1px,
+        var(--beige) 1px, var(--beige) 24px
+      );
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .ph-label {
+      font-family: var(--sans);
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.09em;
+      background: rgba(254,252,249,0.82);
+      padding: 6px 16px;
+      border-radius: 100px;
+      text-align: center;
+    }
+
+    /* ── HERO ────────────────────────────────────────── */
+    .hero {
+      display: flex;
+      min-height: 100vh;
+      position: relative;
+    }
+
+    .hero-left {
+      flex: 1;
+      position: relative;
+      z-index: 2;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      padding: 68px 60px 64px;
+      overflow: hidden;
+    }
+
+    .hero-bg {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      background-image: url('uploads/bordencarrie-barbershop-4762345_1920.png');
+      background-size: cover;
+      background-position: center 40%;
+    }
+
+    /* Focused left-side vignette — only behind text, photo stays alive on right */
+    .hero-left::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      background: linear-gradient(
+        105deg,
+        rgba(10,6,4,0.72) 0%,
+        rgba(10,6,4,0.52) 38%,
+        rgba(10,6,4,0.15) 65%,
+        transparent 100%
+      );
+      pointer-events: none;
+    }
+
+    .hero-content {
+      position: relative;
+      z-index: 1;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-family: var(--sans);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: #fff;
+      margin-bottom: 20px;
+      background: rgba(139,38,53,0.85);
+      padding: 5px 14px 5px 12px;
+      border-radius: 100px;
+      width: fit-content;
+      backdrop-filter: blur(4px);
+    }
+
+    .eyebrow::before {
+      content: '';
+      display: block;
+      width: 16px;
+      height: 1px;
+      background: rgba(255,255,255,0.6);
+    }
+
+    .hero-title {
+      font-family: var(--serif);
+      font-size: 68px;
+      font-weight: 700;
+      line-height: 1.06;
+      color: #fff;
+      letter-spacing: -0.025em;
+      margin-bottom: 22px;
+      text-shadow:
+        0 2px 4px rgba(0,0,0,0.9),
+        0 8px 28px rgba(0,0,0,0.7),
+        0 24px 64px rgba(0,0,0,0.5);
+    }
+
+    .hero-title em {
+      font-style: italic;
+      color: #fff;
+    }
+
+    .hero-sub {
+      font-size: 16px;
+      color: rgba(255,255,255,0.92);
+      font-weight: 400;
+      max-width: 420px;
+      margin-bottom: 36px;
+      line-height: 1.75;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.8), 0 4px 16px rgba(0,0,0,0.6);
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 12px;
+    }
+
+    /* ── Hero CTA buttons ────────────── */
+    .hero-actions .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      font-family: var(--sans);
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      padding: 14px 30px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      text-decoration: none;
+      transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+      box-shadow: 0 4px 20px rgba(139,38,53,0.55), 0 2px 6px rgba(0,0,0,0.4);
+    }
+    .hero-actions .btn-primary:hover {
+      background: #a01e2c;
+      transform: translateY(-1px);
+      box-shadow: 0 6px 28px rgba(139,38,53,0.65);
+    }
+    .hero-actions .btn-outline {
+      display: inline-flex;
+      align-items: center;
+      font-family: var(--sans);
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      padding: 13px 26px;
+      background: rgba(255,255,255,0.12);
+      color: #fff;
+      border: 1.5px solid rgba(255,255,255,0.6);
+      border-radius: 4px;
+      cursor: pointer;
+      text-decoration: none;
+      transition: background 0.2s, border-color 0.2s;
+      backdrop-filter: blur(8px);
+    }
+    .hero-actions .btn-outline:hover {
+      background: rgba(255,255,255,0.22);
+      border-color: #fff;
+    }
+
+    .hero-content-mobile { display: none; }
+
+    .btn-ghost {
+      display: inline-flex;
+      align-items: center;
+      padding: 13px 26px;
+      border: 1.5px solid rgba(255,255,255,0.45);
+      border-radius: 4px;
+      color: rgba(255,255,255,0.88);
+      font-family: var(--sans);
+      font-size: 14px;
+      font-weight: 400;
+      text-decoration: none;
+      letter-spacing: 0.03em;
+      transition: border-color 0.2s, color 0.2s;
+      cursor: pointer;
+      background: transparent;
+    }
+
+    .btn-ghost:hover {
+      border-color: rgba(255,255,255,0.88);
+      color: #fff;
+    }
+
+    /* ── BOOKING PANEL ───────────────────────────────── */
+    .hero-right {
+      width: 356px;
+      flex-shrink: 0;
+      background: transparent;
+      display: flex;
+      align-items: center;
+      padding: 88px 24px 24px;
+      position: relative;
+      z-index: 2;
+    }
+
+    .booking-panel {
+      width: 100%;
+      background: #fff;
+      border-radius: 18px;
+      border: 1px solid var(--tan);
+      box-shadow: 0 12px 48px rgba(0,0,0,0.18);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .panel-head {
+      background: var(--dark);
+      padding: 20px 22px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      position: relative;
+      z-index: 2;
+    }
+
+    .panel-bar {
+      width: 3px;
+      height: 20px;
+      background: var(--accent);
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
+
+    .panel-title {
+      font-family: var(--serif);
+      font-size: 17px;
+      font-weight: 600;
+      color: #fff;
+    }
+
+    .panel-body {
+      padding: 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      position: relative;
+      z-index: 2;
+    }
+
+    .f-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .f-label {
+      font-size: 10px;
+      font-weight: 500;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+
+    .f-select {
+      width: 100%;
+      padding: 10px 34px 10px 13px;
+      border: 1.5px solid var(--tan);
+      border-radius: 6px;
+      background: var(--cream);
+      color: var(--dark);
+      font-family: var(--sans);
+      font-size: 14px;
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='7' fill='none'%3E%3Cpath d='M1 1l4.5 4.5L10 1' stroke='%237a6a5a' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 13px center;
+      cursor: pointer;
+      transition: border-color 0.18s;
+    }
+
+    .f-select:hover { border-color: var(--muted); }
+    .f-select:focus { outline: none; border-color: var(--accent); }
+
+    .f-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .btn-book-panel {
+      width: 100%;
+      padding: 14px;
+      background: var(--dark);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-family: var(--sans);
+      font-size: 15px;
+      font-weight: 500;
+      cursor: pointer;
+      letter-spacing: 0.02em;
+      margin-top: 2px;
+      transition: background 0.18s;
+    }
+
+    .btn-book-panel:hover { background: #3c2c1e; }
+
+    .panel-note {
+      text-align: center;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    /* ── BOOKING STRIPS ──────────────────────────────── */
+    .booking-strip {
+      background: var(--strip);
+      border-top: 1px solid #d8d0cc;
+      border-bottom: 1px solid #d8d0cc;
+      padding: 14px 48px;
+    }
+
+    .strip-inner {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .strip-heading {
+      font-family: var(--serif);
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--dark);
+      white-space: nowrap;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .strip-sep {
+      width: 1px;
+      height: 22px;
+      background: #d8d0cc;
+      flex-shrink: 0;
+    }
+
+    .strip-sel {
+      flex: 1;
+      padding: 9px 30px 9px 13px;
+      border: 1.5px solid #d8d0cc;
+      border-radius: 5px;
+      background: #fff;
+      color: var(--dark);
+      font-family: var(--sans);
+      font-size: 13px;
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='7' fill='none'%3E%3Cpath d='M1 1l4.5 4.5L10 1' stroke='%237a6a5a' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 11px center;
+      cursor: pointer;
+      transition: border-color 0.18s;
+    }
+
+    .strip-sel:focus { outline: none; border-color: var(--accent); }
+
+    .f-select.input-error,
+    .strip-sel.input-error {
+      border-color: #c0392b !important;
+      animation: shake 0.35s ease;
+    }
+
+    @keyframes shake {
+      0%,100% { transform: translateX(0); }
+      20%      { transform: translateX(-5px); }
+      40%      { transform: translateX(5px); }
+      60%      { transform: translateX(-4px); }
+      80%      { transform: translateX(4px); }
+    }
+
+    .booking-error-msg {
+      font-size: 11.5px;
+      color: #c0392b;
+      text-align: center;
+      margin-top: 6px;
+      min-height: 16px;
+      font-weight: 500;
+    }
+
+    .strip-error-msg {
+      font-size: 12px;
+      color: #e74c3c;
+      font-weight: 500;
+      white-space: nowrap;
+      align-self: center;
+    }
+
+    .btn-strip {
+      padding: 10px 22px;
+      background: var(--dark);
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      font-family: var(--sans);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
+      transition: background 0.18s;
+      letter-spacing: 0.02em;
+    }
+
+    .btn-strip:hover { background: #3c2c1e; }
+
+    /* ── SECTION COMMON ──────────────────────────────── */
+    .sec { }
+    .sec-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 88px 48px;
+    }
+
+    .sec-eyebrow {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .sec-eyebrow::before {
+      content: '';
+      display: block;
+      width: 26px;
+      height: 1px;
+      background: var(--accent);
+      flex-shrink: 0;
+    }
+
+    .sec-eyebrow span {
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.13em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+
+    .sec-title {
+      font-family: var(--serif);
+      font-size: 42px;
+      font-weight: 700;
+      line-height: 1.12;
+      letter-spacing: -0.02em;
+      color: var(--dark);
+      margin-bottom: 52px;
+    }
+
+    /* ── SERVICES ──────────────────────────────────── */
+    .services { background: var(--cream); padding: 0; }
+
+
+    .bsvc-wrap {
+      position: relative;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 88px 48px;
+    }
+
+    .bsvc-header {
+      text-align: center;
+      margin-bottom: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 18px;
+    }
+
+    .bsvc-stars {
+      text-align: center;
+      color: var(--accent);
+      font-size: 15px;
+      letter-spacing: 6px;
+      margin-bottom: 30px;
+    }
+
+    .bsvc-title {
+      font-family: 'Bebas Neue', 'Playfair Display', serif;
+      font-size: 52px;
+      font-weight: 400;
+      letter-spacing: 0.12em;
+      color: #1a1410;
+      line-height: 1;
+    }
+
+    .bsvc-footer {
+      text-align: center;
+      margin-top: 32px;
+    }
+
+    .bsvc-book-btn {
+      display: inline-block;
+      padding: 11px 38px;
+      border: 1.5px solid #1a1410;
+      border-radius: 2px;
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: #1a1410;
+      cursor: pointer;
+      background: transparent;
+      transition: background 0.2s, color 0.2s;
+    }
+
+    .bsvc-book-btn:hover { background: #1a1410; color: #fff; }
+
+
+
+    /* ── ABOUT ───────────────────────────────────────── */
+    .about { background: var(--dark); }
+
+    .about-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 72px 48px 80px;
+    }
+
+    .about-display-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      line-height: 1;
+    }
+
+    .about-display-word {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-size: clamp(72px, 10.5vw, 148px);
+      font-weight: 300;
+      color: #fff;
+      letter-spacing: 0.07em;
+      line-height: 0.9;
+      text-transform: uppercase;
+      user-select: none;
+    }
+
+    .about-star-ornament {
+      flex-shrink: 0;
+      margin: 0 clamp(12px, 2vw, 32px);
+    }
+
+    .about-editorial-grid {
+      border-top: 1px solid rgba(255,255,255,0.14);
+    }
+
+    .about-editorial-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      border-bottom: 1px solid rgba(255,255,255,0.14);
+    }
+
+    .about-editorial-cell:first-child {
+      border-right: 1px solid rgba(255,255,255,0.14);
+    }
+
+    .about-editorial-cell--photo {
+      overflow: hidden;
+      height: 400px;
+    }
+
+    .about-editorial-cell--photo .photo-ph {
+      width: 100%;
+      height: 100%;
+      border-radius: 0;
+    }
+
+    .about-editorial-cell--text {
+      padding: 36px 44px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 14px;
+    }
+
+    .about-quote-ed {
+      font-family: var(--serif);
+      font-size: 16px;
+      font-style: italic;
+      color: rgba(255,255,255,0.88);
+      line-height: 1.78;
+      font-weight: 400;
+    }
+
+    .about-body-ed {
+      font-size: 14px;
+      color: rgba(255,255,255,0.48);
+      line-height: 1.88;
+      font-weight: 300;
+    }
+
+    .about-stats-bar {
+      display: flex;
+      gap: 52px;
+      padding-top: 32px;
+      border-top: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .about-stat-num {
+      font-family: var(--serif);
+      font-size: 38px;
+      font-weight: 700;
+      color: #fff;
+      line-height: 1;
+    }
+
+    .about-stat-label {
+      font-size: 11px;
+      color: rgba(255,255,255,0.35);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-top: 5px;
+    }
+
+    /* ── GALLERY ─────────────────────────────────────── */
+    .gallery { background: var(--cream); }
+
+    .gallery-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: 220px 220px;
+      gap: 12px;
+    }
+
+    .gal-item {
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .gal-item .photo-ph {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* ── REVIEWS ─────────────────────────────────────── */
+    .reviews { background: var(--beige); overflow: hidden; position: relative; }
+    .reviews-pattern { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
+    .reviews .sec-inner { position: relative; z-index: 1; }
+
+    .rev-card {
+      background: rgba(255,255,255,0.52);
+      backdrop-filter: blur(16px) saturate(1.6);
+      -webkit-backdrop-filter: blur(16px) saturate(1.6);
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,0.52);
+      padding: 28px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      box-shadow: inset 0 1.5px 0 rgba(255,255,255,0.75), 0 4px 20px rgba(0,0,0,0.06);
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.22s, box-shadow 0.22s;
+    }
+
+    .rev-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.22) 0%, transparent 55%);
+      pointer-events: none;
+    }
+
+    .rev-card:hover {
+      transform: translateY(-3px);
+      box-shadow: inset 0 1.5px 0 rgba(255,255,255,0.9), 0 10px 36px rgba(0,0,0,0.1);
+    }
+
+    .rev-stars {
+      color: var(--accent);
+      font-size: 15px;
+      letter-spacing: 3px;
+    }
+
+    .rev-text {
+      font-family: var(--serif);
+      font-size: 17px;
+      font-style: italic;
+      color: var(--dark);
+      line-height: 1.6;
+      flex: 1;
+    }
+
+    .rev-author {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .rev-source {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--tan);
+    }
+
+    /* ── CONTACT ─────────────────────────────────────── */
+    /* ── FAQ ──────────────────────────────────────────── */
+    .faq { background: #111010; }
+
+    .faq-layout {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 88px 48px 10px;
+      display: grid;
+      grid-template-columns: 1fr 1.45fr;
+      gap: 0 88px;
+      align-items: start;
+    }
+
+    .faq-image-side {
+      position: sticky;
+      top: 88px;
+    }
+
+    .faq-chair-img {
+      width: 100%;
+      height: 580px;
+      object-fit: contain;
+      object-position: center center;
+      filter: grayscale(100%);
+      transform: scaleX(-1);
+      border-radius: 2px;
+      display: block;
+    }
+
+    .faq-content-side .sec-eyebrow span { color: var(--accent); }
+    .faq-content-side .sec-title { color: #fff; margin-bottom: 28px; font-size: 48px; }
+
+    .faq-list { max-width: none; }
+
+    .faq-item { border-bottom: 1px solid rgba(255,255,255,0.08); }
+    .faq-item:first-child { border-top: 1px solid rgba(255,255,255,0.08); }
+
+    .faq-q {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 0;
+      font-family: var(--sans);
+      font-size: 14.5px;
+      font-weight: 400;
+      color: rgba(255,255,255,0.7);
+      cursor: pointer;
+      list-style: none;
+      gap: 24px;
+      user-select: none;
+      letter-spacing: 0.01em;
+    }
+    .faq-q::-webkit-details-marker { display: none; }
+    .faq-q::marker { display: none; }
+    .faq-q::after {
+      content: '›';
+      font-size: 22px;
+      font-weight: 300;
+      color: rgba(255,255,255,0.25);
+      flex-shrink: 0;
+      transition: transform 0.25s ease, color 0.2s;
+      line-height: 1;
+    }
+    details[open] > .faq-q { color: #fff; }
+    details[open] > .faq-q::after {
+      transform: rotate(90deg);
+      color: var(--accent);
+    }
+
+    .faq-a {
+      padding: 0 32px 20px 0;
+      font-size: 13.5px;
+      color: rgba(255,255,255,0.38);
+      line-height: 1.78;
+      max-width: none;
+    }
+
+    .contact {
+      background: var(--cream);
+      padding: 72px 0 0;
+    }
+
+    .contact .sec-eyebrow span { color: var(--accent); border-color: var(--accent); }
+    .contact .sec-title { color: var(--dark); }
+
+    .contact-grid {
+      display: grid;
+      grid-template-columns: 1.1fr 1fr 1.3fr;
+      gap: 0;
+      align-items: start;
+      margin-top: 56px;
+      padding-bottom: 72px;
+    }
+
+    .contact-info {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .contact-detail {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+
+    .contact-detail-icon {
+      width: 18px;
+      flex-shrink: 0;
+      margin-top: 3px;
+      color: var(--accent);
+    }
+
+    .cd-label {
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 4px;
+    }
+
+    .cd-value {
+      font-size: 14px;
+      color: var(--dark);
+      line-height: 1.7;
+    }
+
+    .contact-socials {
+      display: flex;
+      gap: 10px;
+      margin-top: 4px;
+    }
+
+    .contact-socials a {
+      width: 34px;
+      height: 34px;
+      border: 1px solid var(--tan);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 13px;
+      transition: border-color 0.18s, color 0.18s;
+    }
+
+    .contact-socials a:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    /* ── HOURS TABLE ──────────────────────────────────── */
+    .hours-col {
+      border-left: 1px solid var(--tan);
+      padding-left: 48px;
+    }
+
+    .hours-title {
+      font-family: var(--serif);
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 20px;
+    }
+
+    .hours-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .hours-table tr {
+      border-bottom: 1px solid var(--tan);
+    }
+
+    .hours-table tr:last-child { border-bottom: none; }
+
+    .hours-table td {
+      padding: 9px 0;
+      font-size: 13.5px;
+      color: var(--dark);
+    }
+
+    .hours-table td:first-child {
+      width: 44%;
+      color: var(--muted);
+      font-size: 12px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .hours-table tr.today td {
+      color: var(--dark);
+      font-weight: 600;
+    }
+
+    .hours-table tr.today td:first-child {
+      color: var(--accent);
+    }
+
+    .hours-closed { color: var(--tan) !important; font-style: italic; }
+
+    /* ── MAP COL ─────────────────────────────────────── */
+    .map-col {
+      border-left: 1px solid var(--tan);
+      padding-left: 48px;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .btn-cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 28px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-family: var(--sans);
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      text-decoration: none;
+      transition: background 0.18s;
+      align-self: flex-start;
+      margin-top: 20px;
+    }
+
+    .btn-cta:hover { background: #6e1e2a; }
+
+    .map-ph {
+      width: 100%;
+      flex: 1;
+      min-height: 260px;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    /* ── FOOTER ──────────────────────────────────────── */
+    footer {
+      background: var(--dark);
+      padding: 44px 48px;
+    }
+
+    .foot-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .foot-logo {
+      font-family: var(--serif);
+      font-size: 19px;
+      font-weight: 600;
+      color: var(--accent);
+    }
+
+    .foot-links {
+      display: flex;
+      gap: 28px;
+      list-style: none;
+    }
+
+    .foot-links a {
+      font-size: 13px;
+      color: rgba(255,255,255,0.45);
+      text-decoration: none;
+      transition: color 0.18s;
+    }
+
+    .foot-links a:hover { color: rgba(255,255,255,0.88); }
+
+    .foot-copy {
+      font-size: 12px;
+      color: rgba(255,255,255,0.25);
+    }
+
+    .float-btn {
+      position: fixed;
+      bottom: 28px;
+      right: 28px;
+      z-index: 300;
+      opacity: 0;
+      transform: translateY(12px) scale(0.85);
+      transition: opacity 0.28s, transform 0.28s;
+      pointer-events: none;
+    }
+
+    .float-btn.show {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      pointer-events: auto;
+    }
+
+    .float-inner {
+      width: 86px;
+      height: 86px;
+      border-radius: 50%;
+      background: var(--accent);
+      border: 2.5px solid rgba(255,255,255,0.35);
+      box-shadow:
+        0 0 0 6px rgba(139,38,53,0.22),
+        0 0 28px rgba(139,38,53,0.55),
+        0 0 56px rgba(139,38,53,0.28),
+        0 8px 24px rgba(0,0,0,0.3);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      gap: 2px;
+      transition: transform 0.18s, box-shadow 0.18s;
+      animation: pulse-glow 2.4s ease-in-out infinite;
+    }
+
+    @keyframes pulse-glow {
+      0%, 100% {
+        box-shadow:
+          0 0 0 6px rgba(139,38,53,0.22),
+          0 0 28px rgba(139,38,53,0.55),
+          0 0 56px rgba(139,38,53,0.28),
+          0 8px 24px rgba(0,0,0,0.3);
+      }
+      50% {
+        box-shadow:
+          0 0 0 10px rgba(139,38,53,0.14),
+          0 0 42px rgba(139,38,53,0.72),
+          0 0 80px rgba(139,38,53,0.38),
+          0 8px 28px rgba(0,0,0,0.35);
+      }
+    }
+
+    .float-inner:hover {
+      transform: scale(1.1);
+      box-shadow:
+        0 0 0 10px rgba(139,38,53,0.2),
+        0 0 52px rgba(139,38,53,0.8),
+        0 0 90px rgba(139,38,53,0.4),
+        0 10px 32px rgba(0,0,0,0.35);
+    }
+
+    .float-text {
+      font-family: var(--sans);
+      font-size: 12px;
+      font-weight: 700;
+      color: #fff;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .float-sub {
+      font-size: 10px;
+      color: rgba(255,255,255,0.75);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    /* ── RESERVATION MODAL ───────────────────────────── */
+    .res-modal-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      background: rgba(10,8,8,0.72);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.28s ease;
+    }
+
+    .res-modal-backdrop.open {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .res-modal {
+      background: #1a1212;
+      border: 1px solid rgba(139,38,53,0.25);
+      border-radius: 14px;
+      width: 100%;
+      max-width: 440px;
+      padding: 40px 40px 36px;
+      position: relative;
+      transform: translateY(18px);
+      transition: transform 0.28s ease;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .res-modal-backdrop.open .res-modal {
+      transform: translateY(0);
+    }
+
+    .res-modal-close {
+      position: absolute;
+      top: 16px;
+      right: 18px;
+      background: none;
+      border: none;
+      color: rgba(255,255,255,0.4);
+      font-size: 22px;
+      cursor: pointer;
+      line-height: 1;
+      transition: color 0.18s;
+    }
+
+    .res-modal-close:hover { color: #fff; }
+
+    .res-confirm {
+      text-align: center;
+      margin-bottom: 28px;
+      padding-bottom: 28px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .res-confirm-icon {
+      width: 52px;
+      height: 52px;
+      background: rgba(139,38,53,0.15);
+      border: 1px solid rgba(139,38,53,0.4);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 14px;
+      color: var(--accent);
+    }
+
+    .res-confirm h3 {
+      font-family: var(--serif);
+      font-size: 24px;
+      color: #fff;
+      margin-bottom: 8px;
+    }
+
+    .res-confirm p {
+      font-size: 13.5px;
+      color: rgba(255,255,255,0.55);
+      line-height: 1.6;
+    }
+
+    .res-confirm p strong {
+      color: rgba(255,255,255,0.85);
+    }
+
+    .res-form-title {
+      font-family: var(--serif);
+      font-size: 17px;
+      color: #fff;
+      margin-bottom: 4px;
+    }
+
+    .res-form-sub {
+      font-size: 12.5px;
+      color: rgba(255,255,255,0.45);
+      margin-bottom: 20px;
+    }
+
+    .res-field {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      margin-bottom: 14px;
+    }
+
+    .res-field label {
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.45);
+    }
+
+    .res-field input {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 7px;
+      padding: 11px 14px;
+      font-size: 14px;
+      color: #fff;
+      font-family: var(--sans);
+      outline: none;
+      transition: border-color 0.18s;
+    }
+
+    .res-field input:focus {
+      border-color: rgba(139,38,53,0.6);
+    }
+
+    .res-field input::placeholder { color: rgba(255,255,255,0.25); }
+
+    .res-submit {
+      width: 100%;
+      padding: 13px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 7px;
+      font-family: var(--sans);
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      margin-top: 6px;
+      transition: background 0.18s;
+    }
+
+    .res-submit:hover { background: #6e1e2a; }
+
+    .res-toggle {
+      text-align: center;
+      margin-top: 18px;
+      font-size: 13px;
+      color: rgba(255,255,255,0.4);
+    }
+
+    .res-toggle a {
+      color: var(--accent);
+      cursor: pointer;
+      text-decoration: none;
+      border-bottom: 1px solid transparent;
+      transition: border-color 0.18s;
+    }
+
+    .res-toggle a:hover { border-bottom-color: var(--accent); }
+
+    .res-form-panel { display: none; }
+    .res-form-panel.active { display: block; }
+
+    /* ════════════════════════════════════════════════════
+       HAMBURGER + MOBILE MENU
+       ════════════════════════════════════════════════════ */
+    .nav-hamburger {
+      display: none;
+      flex-direction: column;
+      justify-content: center;
+      gap: 5px;
+      width: 44px;
+      height: 44px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 8px;
+      position: relative;
+      z-index: 210;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .nav-hamburger span {
+      display: block;
+      width: 100%;
+      height: 2px;
+      background: #fff;
+      border-radius: 2px;
+      transition: transform 0.3s ease, opacity 0.2s ease, background 0.42s ease;
+      filter: drop-shadow(0 1px 3px rgba(0,0,0,0.6));
+    }
+
+    nav.scrolled .nav-hamburger span { background: var(--dark); }
+    .nav-hamburger.open span { background: var(--dark); }
+    .nav-hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+    .nav-hamburger.open span:nth-child(2) { opacity: 0; }
+    .nav-hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+    .mobile-menu {
+      position: fixed;
+      top: 68px;
+      left: 0;
+      right: 0;
+      z-index: 199;
+      background: rgba(247,245,240,0.97);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--tan);
+      box-shadow: 0 12px 32px rgba(0,0,0,0.12);
+      display: flex;
+      flex-direction: column;
+      padding: 16px 28px 28px;
+      gap: 2px;
+      transform: translateY(-12px);
+      opacity: 0;
+      pointer-events: none;
+      transition: transform 0.28s ease, opacity 0.28s ease;
+    }
+
+    .mobile-menu.open {
+      transform: translateY(0);
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .mobile-menu-link {
+      font-family: var(--serif);
+      font-size: 19px;
+      color: var(--dark);
+      text-decoration: none;
+      padding: 14px 0;
+      border-bottom: 1px solid rgba(204,199,190,0.5);
+      transition: color 0.18s;
+    }
+
+    .mobile-menu-link:hover { color: var(--accent); }
+
+    .mobile-menu-auth {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .mobile-menu-signin {
+      padding: 13px;
+      background: none;
+      border: 1.5px solid var(--tan);
+      border-radius: 6px;
+      color: var(--dark);
+      font-family: var(--sans);
+      font-size: 15px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+
+    .mobile-menu-join {
+      padding: 14px;
+      background: var(--accent);
+      border: none;
+      border-radius: 6px;
+      color: #fff;
+      font-family: var(--sans);
+      font-size: 15px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+
+    /* ── ANGLED SECTIONS ────────────────────────────────── */
+    /* Clip the BOTTOM-RIGHT of each earlier section so the later
+       section's background peeks through the diagonal triangle.
+       Earlier sections get higher z-index so they paint on top. */
+    .hero          { position: relative; z-index: 10; }
+    .sec.services  { position: relative; z-index: 9;
+                     clip-path: polygon(0 0, 100% 0, 100% calc(100% - 60px), 0 100%);
+                     padding-bottom: 60px; }
+    .sec.about     { position: relative; z-index: 8; margin-top: -60px;
+                     clip-path: polygon(0 0, 100% 0, 100% calc(100% - 60px), 0 100%);
+                     padding-bottom: 60px; }
+    .sec.gallery   { position: relative; z-index: 7; margin-top: -60px; }
+    .booking-strip { position: relative; z-index: 6; }
+    .loyalty-strip { position: relative; z-index: 5; }
+    .sec.reviews   { position: relative; z-index: 4;
+                     clip-path: polygon(0 0, 100% 0, 100% calc(100% - 60px), 0 100%);
+                     padding-bottom: 60px; }
+    .sec.faq       { position: relative; z-index: 3; margin-top: -60px;
+                     clip-path: polygon(0 0, 100% 0, 100% calc(100% - 60px), 0 100%);
+                     padding-bottom: 60px; }
+    .sec.contact   { position: relative; z-index: 2; margin-top: -60px; }
+    footer         { position: relative; z-index: 1; }
+    nav            { z-index: 9999; }
+
+    /* ════════════════════════════════════════════════════
+       RESPONSIVE — TABLET  (≤ 1024px)
+       ════════════════════════════════════════════════════ */
+    @media (max-width: 1024px) {
+      nav { padding: 0 32px; }
+
+      .hero-left { padding: 68px 40px 56px; }
+      .hero-title { font-size: 54px; }
+      .hero-right { width: 312px; padding: 80px 16px 24px; }
+
+      .sec-inner { padding: 72px 36px; }
+      .sec-title { font-size: 36px; margin-bottom: 40px; }
+
+      .bsvc-wrap { padding: 72px 36px; }
+      .bsvc-title { font-size: 46px; }
+
+      .contact-grid { grid-template-columns: 1fr 1fr; gap: 40px 36px; }
+      .map-col { grid-column: 1 / -1; border-left: none; padding-left: 0; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 36px; }
+      .map-col .map-ph { min-height: 320px; }
+
+      .about-inner { padding: 64px 36px 72px; }
+
+      .loyalty-strip-inner { gap: 28px; }
+      .loyalty-perks { gap: 18px; }
+
+      .faq-layout { gap: 0 48px; padding: 72px 36px; }
+      .faq-chair-img { height: 420px; }
+    }
+
+    /* ════════════════════════════════════════════════════
+       RESPONSIVE — MOBILE  (≤ 768px)
+       ════════════════════════════════════════════════════ */
+    @media (max-width: 768px) {
+      /* ── No angles on mobile ── */
+      .sec.services, .sec.about, .sec.reviews, .sec.faq, .sec.contact {
+        clip-path: none !important;
+        padding-bottom: 0 !important;
+      }
+      .sec.about, .sec.gallery, .sec.faq, .sec.contact {
+        margin-top: 0 !important;
+      }
+
+      .nav-links, .nav-auth { display: none; }
+      .nav-hamburger { display: flex; }
+      nav { padding: 0 20px; }
+
+      /* Hero: full-screen with centred booking form */
+      .hero {
+        flex-direction: column;
+        min-height: auto;
+        height: 100vh;
+        height: 100svh;
+        position: relative;
+      }
+      .hero-left { display: none; }
+      .hero-right {
+        position: absolute;
+        top: 50%;
+        left: 0;
+        right: 0;
+        transform: translateY(-50%);
+        margin-top: 34px; /* offset for 68px nav */
+        width: 100%;
+        padding: 0 16px;
+        z-index: 3;
+      }
+      .hero-bg { background-position: center 30%; }
+      .hero-title { font-size: 44px; }
+      .hero-sub { font-size: 15px; margin-bottom: 28px; }
+      .hero-content-mobile {
+        display: block;
+        background: var(--dark);
+        padding: 36px 24px 44px;
+        width: 100%;
+      }
+
+      /* Section padding */
+      .sec-inner { padding: 56px 24px; }
+      .sec-title { font-size: 30px; margin-bottom: 32px; }
+
+      /* Services — single column */
+      .bsvc-wrap { padding: 56px 24px; }
+      .svc-tabs { max-width: 100%; }
+      .bsvc-title { font-size: 38px; }
+      .bsvc-header { gap: 12px; }
+      .bsvc-flourish { width: 70px; }
+
+      /* About */
+      .about-inner { padding: 48px 24px 56px; }
+      .about-display-title { flex-direction: column; gap: 8px; }
+      .about-star-ornament { display: none; }
+      .about-editorial-row { grid-template-columns: 1fr; }
+      .about-editorial-cell:first-child { border-right: none; }
+      .about-editorial-cell--photo { height: 260px; }
+      .about-editorial-cell--text { padding: 28px 24px; }
+      /* keep photo above text on both rows */
+      .about-editorial-row:nth-child(2) .about-editorial-cell--text { order: 2; }
+      .about-stats-bar { flex-wrap: wrap; gap: 28px 40px; }
+      .about-stat-num { font-size: 32px; }
+
+      /* Gallery — 2 cols */
+      .gallery-grid { grid-template-columns: repeat(2, 1fr); grid-template-rows: auto; gap: 10px; }
+      .gal-item { height: 180px; }
+
+      /* FAQ */
+      .faq-layout { grid-template-columns: 1fr; padding: 56px 24px; gap: 0; }
+      .faq-image-side { display: none; }
+      .faq-content-side .sec-title { font-size: 36px; }
+
+      /* Booking strip stacks */
+      .booking-strip { padding: 20px 24px; }
+      .strip-inner { flex-wrap: wrap; gap: 10px; }
+      .strip-heading { width: 100%; justify-content: center; }
+      .strip-sep { display: none; }
+      .strip-sel { flex: 1 1 calc(50% - 5px); min-width: 120px; }
+      .btn-strip { width: 100%; padding: 13px; }
+
+      /* Loyalty strip stacks */
+      .loyalty-strip { padding: 28px 24px; }
+      .loyalty-strip-inner { flex-direction: column; align-items: flex-start; gap: 22px; }
+      .loyalty-strip-right { flex-direction: column; align-items: flex-start; gap: 18px; width: 100%; }
+      .loyalty-perks { width: 100%; justify-content: space-between; gap: 12px; }
+      .loyalty-cta { width: 100%; }
+
+      /* Contact — single column */
+      .contact-grid { grid-template-columns: 1fr; gap: 36px; }
+      .hours-col { border-left: none; padding-left: 0; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 32px; }
+      .map-col { border-top: 1px solid rgba(255,255,255,0.08); padding-top: 32px; }
+      .map-col .map-ph { min-height: 240px; }
+
+      /* Footer stacks */
+      .foot-inner { flex-direction: column; gap: 20px; text-align: center; }
+      .foot-links { flex-wrap: wrap; justify-content: center; gap: 16px 24px; }
+
+      /* Float button smaller */
+      .float-btn { bottom: 20px; right: 20px; }
+
+      /* Reviews cards a touch smaller */
+      .rev-card { width: 280px !important; }
+    }
+
+    /* ════════════════════════════════════════════════════
+       RESPONSIVE — SMALL MOBILE  (≤ 440px)
+       ════════════════════════════════════════════════════ */
+    @media (max-width: 440px) {
+      .hero-title { font-size: 36px; }
+      .hero-actions { flex-direction: column; }
+      .btn-ghost { width: 100%; justify-content: center; }
+      .sec-title { font-size: 26px; }
+      .bsvc-title { font-size: 30px; letter-spacing: 0.08em; }
+      .bsvc-flourish { display: none; }
+      .gallery-grid { grid-template-columns: 1fr; }
+      .gal-item { height: 220px; }
+      .about-display-word { font-size: clamp(48px, 16vw, 72px); }
+      .strip-sel { flex: 1 1 100%; }
+      .loyalty-perks { flex-wrap: wrap; }
+      .res-modal { padding: 32px 24px 28px; }
+    }
+
+
+    /* ── AVAILABILITY COUNTER ──────────────────────── */
+    .panel-head { align-items: flex-start; gap: 14px; }
+    .panel-avail {
+      display: flex; align-items: center; gap: 5px;
+      font-size: 11px; color: rgba(255,255,255,0.48); margin-top: 3px;
+    }
+    .avail-dot {
+      width: 6px; height: 6px; background: #4ade80; border-radius: 50%;
+      flex-shrink: 0; animation: avail-pulse 2.2s ease-in-out infinite;
+    }
+    @keyframes avail-pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+    /* ── TOAST ─────────────────────────────────────── */
+    .toast {
+      position: fixed; top: 82px; left: 50%;
+      transform: translateX(-50%) translateY(-14px);
+      z-index: 9000; background: #1a1410; color: #fff;
+      padding: 10px 22px 10px 10px; border-radius: 100px;
+      font-size: 13.5px; font-weight: 500;
+      display: flex; align-items: center; gap: 10px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.32), 0 0 0 1px rgba(255,255,255,0.07);
+      opacity: 0; transition: opacity 0.28s ease, transform 0.28s ease;
+      pointer-events: none; white-space: nowrap;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .toast-check {
+      width: 22px; height: 22px; background: #4ade80; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; font-size: 12px; color: #111; font-weight: 700; line-height: 1;
+    }
+
+    /* ── ACTIVE NAV LINK ───────────────────────────── */
+    .nav-links a.active { color: #fff !important; }
+    nav.scrolled .nav-links a.active { color: var(--dark) !important; font-weight: 500; }
+
+    /* ── SERVICE TABS ──────────────────────────────── */
+    .svc-tabs { max-width: 680px; margin: 0 auto; }
+    .svc-tab-bar { display: flex; border-bottom: 1.5px solid rgba(180,160,130,0.28); margin-bottom: 0; }
+    .svc-tab {
+      flex: 1; padding: 12px 6px;
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-size: 16px; font-weight: 600; letter-spacing: 0.05em;
+      color: rgba(26,20,16,0.38); background: none; border: none;
+      border-bottom: 2.5px solid transparent; margin-bottom: -1.5px;
+      cursor: pointer; transition: color 0.18s, border-color 0.18s;
+    }
+    .svc-tab.active { color: #1a1410; border-bottom-color: var(--accent); }
+    .svc-tab:hover:not(.active) { color: rgba(26,20,16,0.72); }
+    .svc-tab-content { display: none; }
+    .svc-tab-content.active { display: block; }
+    .svc-item {
+      display: flex; align-items: baseline; padding: 14px 0;
+      border-bottom: 1px solid rgba(180,160,130,0.22);
+    }
+    .svc-item:last-child { border-bottom: none; }
+    .svc-item-info { flex-shrink: 0; }
+    .svc-item-name {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-size: 18px; font-weight: 700; color: #1a1410; display: block; white-space: nowrap;
+    }
+    .svc-item-desc {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-size: 12px; font-style: italic; color: #7a6a50; font-weight: 300;
+    }
+    .svc-item-dots { flex: 1; border-bottom: 1.5px dotted rgba(180,160,130,0.5); margin: 0 16px 4px; min-width: 24px; }
+    .svc-item-price { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 19px; font-weight: 700; color: var(--accent); flex-shrink: 0; }
+    @media (max-width: 768px) {
+      .svc-tab { font-size: 14px; padding: 10px 4px; }
+      .svc-item-name { font-size: 16px; white-space: normal; }
+    }
+
+    /* ── STATIC REVIEWS ────────────────────────────── */
+    .reviews-static { padding: 0 48px 72px; }
+    .reviews-static-grid {
+      display: grid; grid-template-columns: repeat(3,1fr);
+      gap: 20px; max-width: 1200px; margin: 0 auto;
+    }
+    @media (max-width: 1024px) { .reviews-static-grid { grid-template-columns: repeat(2,1fr); } }
+    @media (max-width: 768px) { .reviews-static { padding: 0 24px 56px; } .reviews-static-grid { grid-template-columns: 1fr; } }
+
+    /* ── SKELETON ──────────────────────────────────── */
+    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+    /* ── SCROLL ANIMATIONS ─────────────────────────── */
+    .fade-up {
+      opacity: 0;
+      transform: translateY(26px);
+      transition: opacity 0.7s ease, transform 0.7s ease;
+    }
+    .fade-up.visible { opacity: 1; transform: translateY(0); }
+  </style>
+</head>
+<body>
+
+  <!-- ══ NAV ══════════════════════════════════════════ -->
+  <nav>
+    <a href="#" class="nav-logo">Harbour <span>Barbers</span></a>
+    <ul class="nav-links">
+      <li><a href="#services">Services</a></li>
+      <li><a href="#about">About</a></li>
+      <li><a href="#gallery">Gallery</a></li>
+      <li><a href="#faq">FAQ</a></li>
+      <li><a href="#contact">Contact</a></li>
+    </ul>
+    <div class="nav-auth">
+      <button class="nav-signin" onclick="openResModal('signin', false)">Sign In</button>
+      <a class="nav-join" href="portal.html">Book Now</a>
+    </div>
+    <button class="nav-hamburger" id="navHamburger" aria-label="Open menu" aria-expanded="false">
+      <span></span><span></span><span></span>
+    </button>
+  </nav>
+
+  <!-- Mobile menu drawer -->
+  <div class="mobile-menu" id="mobileMenu">
+    <a href="#services" class="mobile-menu-link">Services</a>
+    <a href="#about" class="mobile-menu-link">About</a>
+    <a href="#gallery" class="mobile-menu-link">Gallery</a>
+    <a href="#faq" class="mobile-menu-link">FAQ</a>
+    <a href="#contact" class="mobile-menu-link">Contact</a>
+    <div class="mobile-menu-auth">
+      <button class="mobile-menu-signin" onclick="openResModal('signin', false)">Sign In</button>
+      <button class="mobile-menu-join" onclick="openResModal('signup', false)">Join Rewards</button>
+    </div>
+  </div>
+
+  <!-- ══ HERO ═════════════════════════════════════════ -->
+  <section class="hero" id="hero">
+
+    <div class="hero-bg"></div>
+
+    <!-- Left: image + headline -->
+    <div class="hero-left">
+
+      <div class="hero-content">
+        <div class="eyebrow">Est. Delta, BC 1992</div>
+        <h1 class="hero-title">Classic cuts,<br><em>modern craft.</em></h1>
+        <p class="hero-sub">Trusted barbers on Elliott Street, Delta, BC. Where tradition meets a sharp eye and a steady hand.</p>
+        <div class="hero-actions">
+          <a href="#book" onclick="openResModal(); return false;" class="btn-primary">Book Now</a>
+          <a href="#services" class="btn-outline">Our Services</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: sticky booking panel -->
+    <div class="hero-right" id="panel-sentinel">
+      <div class="booking-panel">
+        <div class="panel-head">
+          <div class="panel-bar" style="margin-top:4px;flex-shrink:0;"></div>
+          <div>
+            <div class="panel-title">Book Your Appointment</div>
+            <div class="panel-avail"><span class="avail-dot"></span>4 slots available today &middot; Next: 2:00 pm</div>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div class="f-group">
+            <label class="f-label">Service</label>
+            <select class="f-select">
+              <option value="">Choose a service…</option>
+              <option>Haircut — $35</option>
+              <option>Beard Trim — $25</option>
+              <option>Cut + Beard — $55</option>
+              <option>Hot Towel Shave — $55</option>
+              <option>Kids' Cut — $25</option>
+              <option>Shape Up — $30</option>
+            </select>
+          </div>
+          <div class="f-row">
+            <div class="f-group">
+              <label class="f-label">Date</label>
+              <select class="f-select" id="panelDateSel">
+                <option value="">Pick a date…</option>
+              </select>
+            </div>
+            <div class="f-group">
+              <label class="f-label">Time</label>
+              <select class="f-select">
+                <option value="">Pick a time…</option>
+                <option>9:00 am</option>
+                <option>10:00 am</option>
+                <option>11:00 am</option>
+                <option>12:00 pm</option>
+                <option>2:00 pm</option>
+                <option>3:00 pm</option>
+                <option>4:00 pm</option>
+                <option>5:00 pm</option>
+              </select>
+            </div>
+          </div>
+          <div class="f-group">
+            <label class="f-label">Barber</label>
+            <select class="f-select">
+              <option value="">Any barber</option>
+              <option>Marco — Senior Barber</option>
+              <option>James — Master Barber</option>
+              <option>Sofia — Barber</option>
+            </select>
+          </div>
+          <button class="btn-book-panel" id="panelReserveBtn">Reserve My Spot →</button>
+          <p class="panel-note">Walk-ins welcome · No card required</p>
+          <p class="booking-error-msg" id="panelErrorMsg"></p>
+          <div class="panel-loyalty-prompt">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <span>Sign in to earn loyalty points — <button class="panel-loyalty-link" onclick="openResModal('signin',false)">Sign in</button> or <button class="panel-loyalty-link" onclick="openResModal('signup',false)">create account</button></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- Mobile only: headline content shown below hero -->
+  <div class="hero-content-mobile">
+    <div class="eyebrow">Est. Delta, BC 1992</div>
+    <h1 class="hero-title">Classic cuts,<br><em>modern craft.</em></h1>
+    <p class="hero-sub">Trusted barbers on Elliott Street, Delta, BC. Where tradition meets a sharp eye and a steady hand.</p>
+    <div class="hero-actions">
+      <a href="#book" onclick="openResModal(); return false;" class="btn-primary">Book Now</a>
+      <a href="#services" class="btn-outline">Our Services</a>
+    </div>
+  </div>
+
+
+
+  <!-- ══ SERVICES ══════════════════════════════════════ -->
+  <section class="sec services reveal" id="services">
+    <div class="bsvc-wrap reveal">
+
+      <!-- HEADER with flourish ornaments -->
+      <div class="bsvc-header">
+        <svg class="bsvc-flourish" width="120" height="36" viewBox="0 0 120 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M118 18 C100 18 90 6 70 6 C50 6 40 18 20 18 C10 18 4 14 2 10" stroke="#222" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+          <path d="M118 18 C100 18 90 30 70 30 C50 30 40 18 20 18 C10 18 4 22 2 26" stroke="#222" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+          <circle cx="2" cy="18" r="3" fill="#222"/>
+        </svg>
+        <h2 class="bsvc-title">Barber Services</h2>
+        <svg class="bsvc-flourish" width="120" height="36" viewBox="0 0 120 36" fill="none" xmlns="http://www.w3.org/2000/svg" style="transform:scaleX(-1)">
+          <path d="M118 18 C100 18 90 6 70 6 C50 6 40 18 20 18 C10 18 4 14 2 10" stroke="#222" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+          <path d="M118 18 C100 18 90 30 70 30 C50 30 40 18 20 18 C10 18 4 22 2 26" stroke="#222" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+          <circle cx="2" cy="18" r="3" fill="#222"/>
+        </svg>
+      </div>
+
+      <!-- 5 gold stars -->
+      <div class="bsvc-stars">★ ★ ★ ★ ★</div>
+
+      <!-- Service tabs -->
+      <div class="svc-tabs">
+        <div class="svc-tab-bar">
+          <button class="svc-tab active" data-tab="cuts">Haircuts</button>
+          <button class="svc-tab" data-tab="beard">Beard &amp; Shave</button>
+          <button class="svc-tab" data-tab="packages">Packages</button>
+        </div>
+        <div class="svc-tab-content active" id="tab-cuts">
+          <div class="svc-item"><div class="svc-item-info"><span class="svc-item-name">Skin Fade</span><span class="svc-item-desc">Zero to gradual fade, blended smooth</span></div><div class="svc-item-dots"></div><div class="svc-item-price" data-price-key="skin-fade">$40</div></div>
+          <div class="svc-item"><div class="svc-item-info"><span class="svc-item-name">Men's Haircut</span><span class="svc-item-desc">Classic cut of varying lengths and complexity</span></div><div class="svc-item-dots"></div><div class="svc-item-price" data-price-key="mens-haircut">from $35</div></div>
+          <div class="svc-item"><div class="svc-item-info"><span class="svc-item-name">Shape Up</span><span class="svc-item-desc">Edge, line-up and fade finish</span></div><div class="svc-item-dots"></div><div class="svc-item-price" data-price-key="shape-up">$30</div></div>
+          <div class="svc-item"><div class="svc-item-info"><span class="svc-item-name">Hair Styling</span><span class="svc-item-desc">Finish with varnish, foam or clay</span></div><div class="svc-item-dots"></div><div class="svc-item-price" data-price-key="hair-styling">$20</div></div>
+          <div class="svc-item"><div class="svc-item-info"><span class="svc-item-name">Kids' Cut</span><span class="svc-item-desc">Patient &amp; friendly, under 12 years</span></div><div class="svc-item-dots"></div><div class="svc-item-price" data-price-key="kids-cut">$25</div></div>
+          <div class="svc-item"><div class="svc-item-info"><span class="svc-item-name">Dad + Son</span><span class="svc-item-desc">Special family offer, 2 haircuts together</span></div><div class="svc-item-dots"></div><div class="svc-item-price" data-price-key="dad-son">$55</div></div>
+        </div>
+        <div class="svc-tab-content" id="tab-beard">
+          <div class="svc-item"><div class="svc-item-info"><span class="svc-item-name">Beard Only</span><span class="svc-item-desc">Professional beard care and correction</span></div><div class="svc-item-dots"></div><div class="svc-item-price" data-price-key="beard-only">$25</div></div>
+          <div class="svc-item"><div class="svc-item-info"><span class="svc-item-name">Hot Towel Shave</span><span class="svc-item-desc">Traditional straight razor, hot towel finish</span></div><div class="svc-item-dots"></div><div class="svc-item-price" data-price-key="hot-towel-shave">$55</div></div>
+          <div class="svc-item"><div class="svc-item-info"><span class="svc-item-name">Shaving</span><span class="svc-item-desc">Shaving with professional equipment</span></div><div class="svc-item-dots"></div><div class="svc-item-price" data-price-key="shaving">$20</div></div>
+        </div>
+        <div class="svc-tab-content" id="tab-packages">
+          <div class="svc-item"><div class="svc-item-info"><span class="svc-item-name">Haircut + Beard</span><span class="svc-item-desc">Model haircut + full beard trim</span></div><div class="svc-item-dots"></div><div class="svc-item-price" data-price-key="haircut-beard">$55</div></div>
+          <div class="svc-item"><div class="svc-item-info"><span class="svc-item-name">Children's Haircut</span><span class="svc-item-desc">Special child-friendly chair, patient &amp; gentle</span></div><div class="svc-item-dots"></div><div class="svc-item-price" data-price-key="childrens-haircut">$25</div></div>
+        </div>
+      </div>
+
+            <!-- Online Booking -->
+      <div class="bsvc-footer">
+        <button class="bsvc-book-btn" onclick="window.scrollTo({top:0,behavior:'smooth'})">Online Booking</button>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ══ ABOUT ══════════════════════════════════════════ -->
+  <section class="sec about" id="about">
+    <div class="about-inner">
+
+      <!-- Giant editorial headline -->
+      <div class="about-display-title">
+        <span class="about-display-word">ABOUT</span>
+        <svg class="about-star-ornament" width="62" height="62" viewBox="0 0 62 62" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <line x1="31" y1="3"  x2="31" y2="59" stroke="white" stroke-width="1.4"/>
+          <line x1="3"  y1="31" x2="59" y2="31" stroke="white" stroke-width="1.4"/>
+          <line x1="9.5"  y1="9.5"  x2="52.5" y2="52.5" stroke="white" stroke-width="1.4"/>
+          <line x1="52.5" y1="9.5"  x2="9.5"  y2="52.5" stroke="white" stroke-width="1.4"/>
+          <line x1="31" y1="13" x2="31" y2="21" stroke="white" stroke-width="1" opacity="0.55"/>
+          <line x1="31" y1="41" x2="31" y2="49" stroke="white" stroke-width="1" opacity="0.55"/>
+          <line x1="13" y1="31" x2="21" y2="31" stroke="white" stroke-width="1" opacity="0.55"/>
+          <line x1="41" y1="31" x2="49" y2="31" stroke="white" stroke-width="1" opacity="0.55"/>
+          <circle cx="31" cy="31" r="3.5" fill="white"/>
+          <circle cx="31" cy="31" r="7"   fill="none" stroke="white" stroke-width="0.7" opacity="0.4"/>
+        </svg>
+        <span class="about-display-word">US</span>
+      </div>
+
+      <!-- Editorial grid -->
+      <div class="about-editorial-grid">
+
+        <!-- Row 1: photo left, text right -->
+        <div class="about-editorial-row">
+          <div class="about-editorial-cell about-editorial-cell--photo">
+            <img src="uploads/behrouz-sasani-qZnHiHyX9yc-unsplash.jpg" style="width:100%;height:100%;object-fit:cover;object-position:center 20%;display:block;">
+          </div>
+          <div class="about-editorial-cell about-editorial-cell--text">
+            <blockquote class="about-quote-ed">"A great haircut isn't just about the hair. It's the 30 minutes where a man can sit down, breathe, and leave feeling like himself again."</blockquote>
+            <p class="about-body-ed">James founded Harbour Barbers in 1992 with a simple belief: every customer deserves a barber's full attention and a cut that suits their life — not just the trend. Over three decades later, that philosophy hasn't changed.</p>
+          </div>
+        </div>
+
+        <!-- Row 2: text left, photo right -->
+        <div class="about-editorial-row">
+          <div class="about-editorial-cell about-editorial-cell--text">
+            <p class="about-body-ed">Our team of three carries that tradition forward, each with their own style and speciality. Walk-ins are always welcome, but regulars know to book ahead.</p>
+            <p class="about-body-ed">Step through the door and you'll find the same unhurried pace, the same attention to detail, and the same honest craft that has kept locals coming back for over thirty years.</p>
+          </div>
+          <div class="about-editorial-cell about-editorial-cell--photo">
+            <img src="uploads/riccardo-pitzalis-TpeBIIM0UIY-unsplash.jpg" style="width:100%;height:100%;object-fit:cover;object-position:center 20%;display:block;">
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Stats bar -->
+      <div class="about-stats-bar">
+        <div>
+          <div class="about-stat-num">34</div>
+          <div class="about-stat-label">Years Est.</div>
+        </div>
+        <div>
+          <div class="about-stat-num">3</div>
+          <div class="about-stat-label">Barbers</div>
+        </div>
+        <div>
+          <div class="about-stat-num">12k+</div>
+          <div class="about-stat-label">Happy Clients</div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ══ GALLERY ════════════════════════════════════════ -->
+  <section class="sec gallery" id="gallery">
+    <div class="sec-inner">
+      <div class="sec-eyebrow"><span>The work</span></div>
+      <h2 class="sec-title">Gallery</h2>
+      <div class="gallery-grid">
+        <div class="gal-item"><image-slot id="gal1" style="width:100%;height:100%" shape="rect" src="uploads/pexels-ryank-12304508.jpg" placeholder="Drop a photo here"></image-slot></div>
+        <div class="gal-item"><image-slot id="gal2" style="width:100%;height:100%" shape="rect" src="uploads/pexels-instasky-9992819.jpg" placeholder="Drop a photo here"></image-slot></div>
+        <div class="gal-item"><image-slot id="gal3" style="width:100%;height:100%" shape="rect" src="uploads/pexels-cottonbro-3998413.jpg" placeholder="Drop a photo here"></image-slot></div>
+        <div class="gal-item"><image-slot id="gal4" style="width:100%;height:100%" shape="rect" src="uploads/danhusseyphoto-barber-5978819_1920.jpg" placeholder="Drop a photo here"></image-slot></div>
+        <div class="gal-item"><image-slot id="gal5" style="width:100%;height:100%" shape="rect" src="uploads/makamuki0-hairdressing-2142482_1920 (1).jpg" placeholder="Drop a photo here"></image-slot></div>
+        <div class="gal-item"><image-slot id="gal6" style="width:100%;height:100%" shape="rect" src="uploads/pexels-ai25studioai-4625624.jpg" placeholder="Drop a photo here"></image-slot></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ BOOKING STRIP ③ — after gallery ════════════════ -->
+  <div class="booking-strip">
+    <div class="strip-inner">
+      <div class="strip-heading">✂ Book Your Visit</div>
+      <div class="strip-sep"></div>
+      <select class="strip-sel">
+        <option value="">Service…</option>
+        <option>Haircut — $35</option>
+        <option>Beard Trim — $25</option>
+        <option>Cut + Beard — $55</option>
+      </select>
+      <select class="strip-sel" id="stripDateSel">
+        <option value="">Date…</option>
+      </select>
+      <select class="strip-sel">
+        <option value="">Time…</option>
+        <option>9:00 am</option>
+        <option>10:00 am</option>
+        <option>11:00 am</option>
+      </select>
+      <select class="strip-sel">
+        <option value="">Barber…</option>
+        <option value="any">Any available</option>
+        <option value="marco">Marco</option>
+        <option value="james">James</option>
+        <option value="sofia">Sofia</option>
+      </select>
+      <button class="btn-strip" id="stripReserveBtn">Reserve Spot →</button>
+      <span class="strip-error-msg" id="stripErrorMsg"></span>
+    </div>
+  </div>
+
+  <!-- ══ LOYALTY STRIP ══════════════════════════════════ -->
+  <div class="loyalty-strip">
+    <div class="loyalty-strip-inner">
+      <div class="loyalty-strip-left">
+        <div class="loyalty-strip-icon">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        </div>
+        <div>
+          <div class="loyalty-strip-title">Harbour Barbers Rewards</div>
+          <div class="loyalty-strip-sub">Earn 1 point for every dollar spent. Redeem for discounts &amp; free services. Gold at 240 pts · Platinum at 500 pts.</div>
+        </div>
+      </div>
+      <div class="loyalty-strip-right">
+        <div class="loyalty-perks">
+          <div class="loyalty-perk"><span class="perk-num">1pt</span><span class="perk-label">Per $1 spent</span></div>
+          <div class="loyalty-perk"><span class="perk-num">★</span><span class="perk-label">Priority</span></div>
+          <div class="loyalty-perk"><span class="perk-num">%</span><span class="perk-label">Discounts</span></div>
+        </div>
+        <button class="loyalty-cta" onclick="openResModal('signup', false)">Join Free →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ REVIEWS ════════════════════════════════════════ -->
+  <section class="sec reviews" id="reviews">
+
+    <svg class="reviews-pattern" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <pattern id="bp" x="0" y="0" width="240" height="240" patternUnits="userSpaceOnUse">
+          <g transform="translate(18,12) rotate(20,20,35)" stroke="#8b2635" stroke-width="1.7" fill="none" stroke-linecap="round" opacity="0.13">
+            <circle cx="10" cy="10" r="8"/>
+            <circle cx="30" cy="10" r="8"/>
+            <line x1="10" y1="18" x2="20" y2="53"/>
+            <line x1="30" y1="18" x2="20" y2="53"/>
+            <circle cx="20" cy="35" r="2.5" fill="#8b2635"/>
+          </g>
+          <g transform="translate(8,162)" stroke="#8b2635" stroke-width="1.5" fill="none" stroke-linecap="round" opacity="0.13">
+            <rect x="0" y="0" width="88" height="13" rx="3"/>
+            <line x1="7"  y1="13" x2="7"  y2="29"/>
+            <line x1="17" y1="13" x2="17" y2="29"/>
+            <line x1="27" y1="13" x2="27" y2="29"/>
+            <line x1="37" y1="13" x2="37" y2="29"/>
+            <line x1="47" y1="13" x2="47" y2="29"/>
+            <line x1="57" y1="13" x2="57" y2="29"/>
+            <line x1="67" y1="13" x2="67" y2="29"/>
+            <line x1="77" y1="13" x2="77" y2="29"/>
+          </g>
+          <g transform="translate(148,12) rotate(-22,18,30)" stroke="#8b2635" stroke-width="1.5" fill="none" stroke-linecap="round" opacity="0.13">
+            <path d="M16,0 Q22,0 23,4 L23,56 Q23,60 16,60 Q10,60 10,56 L10,4 Q10,0 16,0 Z"/>
+            <path d="M0,8 Q5,10 10,10 L10,50 Q5,50 0,52 Z"/>
+            <line x1="2" y1="12" x2="2" y2="48"/>
+          </g>
+          <g transform="translate(155,138) rotate(-25,16,26)" stroke="#8b2635" stroke-width="1.4" fill="none" stroke-linecap="round" opacity="0.09">
+            <circle cx="8"  cy="8" r="6"/>
+            <circle cx="24" cy="8" r="6"/>
+            <line x1="8"  y1="14" x2="16" y2="42"/>
+            <line x1="24" y1="14" x2="16" y2="42"/>
+            <circle cx="16" cy="28" r="2" fill="#8b2635"/>
+          </g>
+        </pattern>
+      </defs>
+      <rect width="100%" height="100%" fill="url(#bp)"/>
+    </svg>
+
+    <div class="sec-inner" style="padding-bottom: 0;">
+      <div class="sec-eyebrow"><span>Happy customers</span></div>
+      <h2 class="sec-title">What People Say</h2>
+    </div>
+    <div class="reviews-static">
+      <div class="reviews-static-grid">
+        <div class="rev-card"><div class="rev-stars">★★★★★</div><p class="rev-text">"Best barber in Dublin, full stop. James knows exactly what suits you — I just sit down and let him do his thing."</p><div class="rev-author"><span>— Seán M.</span><span class="rev-source">Google</span></div></div>
+        <div class="rev-card"><div class="rev-stars">★★★★★</div><p class="rev-text">"Always on point, never rushed. The hot towel shave is something else. My go-to for five years running."</p><div class="rev-author"><span>— David K.</span><span class="rev-source">Google</span></div></div>
+        <div class="rev-card"><div class="rev-stars">★★★★★</div><p class="rev-text">"Took my son here for his first proper cut. Liam was brilliant with him. We won't be going anywhere else."</p><div class="rev-author"><span>— Tom R.</span><span class="rev-source">Google</span></div></div>
+        <div class="rev-card"><div class="rev-stars">★★★★★</div><p class="rev-text">"Incredible attention to detail. Left looking sharper than I have in years. Will never go anywhere else."</p><div class="rev-author"><span>— Ciarán B.</span><span class="rev-source">Google</span></div></div>
+        <div class="rev-card"><div class="rev-stars">★★★★★</div><p class="rev-text">"Conor gave me exactly the fade I had in mind. Friendly atmosphere, fair price. Highly recommend."</p><div class="rev-author"><span>— Rory F.</span><span class="rev-source">Google</span></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ CONTACT ════════════════════════════════════════ -->
+  <!-- ══ FAQ ══════════════════════════════════════════════ -->
+  <section class="sec faq" id="faq">
+    <div class="faq-layout">
+      <div class="faq-image-side">
+        <img src="uploads/vecteezy_brown-leather-chair-with-gold-trim-displayed-on-transparent_55938528.png" class="faq-chair-img" alt="Barber chair">
+      </div>
+      <div class="faq-content-side">
+        <div class="sec-eyebrow"><span>Common questions</span></div>
+        <h2 class="sec-title">FAQ</h2>
+        <div class="faq-list">
+
+        <details class="faq-item">
+          <summary class="faq-q">Do I need to book in advance?</summary>
+          <p class="faq-a">Walk-ins are always welcome, but booking ahead guarantees your preferred barber and time slot. Saturdays fill up quickly — we recommend booking by Wednesday for the weekend.</p>
+        </details>
+
+        <details class="faq-item">
+          <summary class="faq-q">How long does a haircut take?</summary>
+          <p class="faq-a">A standard haircut takes around 30–40 minutes. A cut and beard combined runs closer to 50–60 minutes. We never rush — you’ll leave looking right.</p>
+        </details>
+
+        <details class="faq-item">
+          <summary class="faq-q">Can I get a beard trim without a haircut?</summary>
+          <p class="faq-a">Absolutely. Beard trims start from $25 and can be booked as a standalone service. Our barbers take the same care with your beard as they do with your hair.</p>
+        </details>
+
+        <details class="faq-item">
+          <summary class="faq-q">What payment methods do you accept?</summary>
+          <p class="faq-a">We accept cash and all major debit and credit cards. No contactless limit. Tipping is always appreciated but never expected.</p>
+        </details>
+
+        <details class="faq-item">
+          <summary class="faq-q">What is your cancellation policy?</summary>
+          <p class="faq-a">We ask for at least 24 hours notice if you need to cancel or reschedule. Last-minute cancellations make it harder for us to accommodate walk-ins and other regulars.</p>
+        </details>
+
+        <details class="faq-item">
+          <summary class="faq-q">Is there parking nearby?</summary>
+          <p class="faq-a">Free street parking on Elliott Street directly outside. Easily reached from anywhere in the Lower Mainland.</p>
+        </details>
+
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec contact" id="contact">
+    <div class="sec-inner">
+      <div class="sec-eyebrow"><span>Find us</span></div>
+      <h2 class="sec-title">Contact Us</h2>
+      <div class="contact-grid">
+
+        <!-- Col 1: Info -->
+        <div class="contact-info">
+          <div class="contact-detail">
+            <svg class="contact-detail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
+            <div>
+              <div class="cd-value">4857 Elliott St Unit 107<br>Delta, BC V4K 2X7</div>
+            </div>
+          </div>
+          <div class="contact-detail">
+            <svg class="contact-detail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 11a19.79 19.79 0 01-3.07-8.67A2 2 0 012 .18h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
+            <div class="cd-value"><a href="tel:+16049468033" style="color:inherit;text-decoration:none;">+1 (604) 946-8033</a></div>
+          </div>
+          <div class="contact-detail">
+            <svg class="contact-detail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+            <div class="cd-value">info@harbourbarbers.ca</div>
+          </div>
+          <div class="contact-socials">
+            <a href="#" aria-label="Instagram">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg>
+            </a>
+            <a href="#" aria-label="Facebook">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z"/></svg>
+            </a>
+            <a href="#" aria-label="TikTok">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 12a4 4 0 104 4V4a5 5 0 005 5"/></svg>
+            </a>
+            <a href="#" aria-label="Google">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 22C6.48 22 2 17.52 2 12S6.48 2 12 2c2.76 0 5.26 1.12 7.07 2.93"/><path d="M22 12h-4M22 12c0 5.52-4.48 10-10 10"/><path d="M18 5l4 4-4 4"/></svg>
+            </a>
+          </div>
+          <a href="#hero" class="btn-cta">Book an Appointment →</a>
+        </div>
+
+        <!-- Col 2: Hours -->
+        <div class="hours-col">
+          <div class="hours-title">Opening Hours</div>
+          <table class="hours-table">
+            <tbody>
+              <tr>
+                <td>Mon</td>
+                <td>9 am – 6 pm</td>
+              </tr>
+              <tr>
+                <td>Tue</td>
+                <td>9 am – 6 pm</td>
+              </tr>
+              <tr>
+                <td>Wed</td>
+                <td>9 am – 6 pm</td>
+              </tr>
+              <tr>
+                <td>Thu</td>
+                <td>9 am – 7 pm</td>
+              </tr>
+              <tr>
+                <td>Fri</td>
+                <td>9 am – 6 pm</td>
+              </tr>
+              <tr>
+                <td>Sat</td>
+                <td>10 am – 5 pm</td>
+              </tr>
+              <tr class="hours-closed">
+                <td>Sun</td>
+                <td>Closed</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Col 3: Map -->
+        <div class="map-col">
+          <div style="flex:1;min-height:280px;border-radius:8px;overflow:hidden;">
+            <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2612.7466359386494!2d-123.08707132349103!3d49.09145477136476!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x5485e0e9f887b567%3A0xde63f5bf20441a8e!2sHarbour%20Barbers!5e0!3m2!1sen!2sca!4v1780563112171!5m2!1sen!2sca" width="100%" height="100%" style="border:0;display:block;min-height:280px;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ FOOTER ══════════════════════════════════════════ -->
+  <footer>
+    <div class="foot-inner">
+      <div class="foot-logo">Harbour Barbers</div>
+      <ul class="foot-links">
+        <li><a href="#services">Services</a></li>
+        <li><a href="#about">About</a></li>
+        <li><a href="#gallery">Gallery</a></li>
+        <li><a href="#faq">FAQ</a></li>
+        <li><a href="#contact">Contact</a></li>
+        <li><a href="#">Instagram</a></li>
+      </ul>
+      <div class="foot-copy">© 2026 Harbour Barbers · Delta, BC</div>
+    </div>
+  </footer>
+
+  <!-- ══ FLOATING BOOK BUTTON ════════════════════════════ -->
+  <div class="float-btn" id="float-btn">
+    <div class="float-inner" id="float-inner">
+      <span class="float-text">Book</span>
+      <span class="float-sub">Now</span>
+    </div>
+  </div>
+
+  <script>
+    // Toast notification
+    function showToast(msg, dur) {
+      var t = document.getElementById('toast');
+      document.getElementById('toastMsg').textContent = msg || 'Spot reserved!';
+      t.classList.add('show');
+      setTimeout(function() { t.classList.remove('show'); }, dur || 2600);
+    }
+
+    // Active nav section highlighting
+    (function() {
+      var secs = document.querySelectorAll('section[id]');
+      var links = document.querySelectorAll('.nav-links a[href^="#"]');
+      if (!secs.length || !links.length) return;
+      var obs = new IntersectionObserver(function(entries) {
+        entries.forEach(function(e) {
+          if (e.isIntersecting) links.forEach(function(a) {
+            a.classList.toggle('active', a.getAttribute('href') === '#' + e.target.id);
+          });
+        });
+      }, { rootMargin: '-28% 0px -62% 0px', threshold: 0 });
+      secs.forEach(function(s) { obs.observe(s); });
+    })();
+
+    // Nav: transparent over hero, white when scrolled
+    const nav = document.querySelector('nav');
+    const onScroll = () => nav.classList.toggle('scrolled', window.scrollY > 60);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+
+    // Mobile hamburger menu
+    const hamburger = document.getElementById('navHamburger');
+    const mobileMenu = document.getElementById('mobileMenu');
+    function toggleMobileMenu(force) {
+      const willOpen = force !== undefined ? force : !mobileMenu.classList.contains('open');
+      mobileMenu.classList.toggle('open', willOpen);
+      hamburger.classList.toggle('open', willOpen);
+      hamburger.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+    }
+    hamburger.addEventListener('click', () => toggleMobileMenu());
+    // Close menu when a link is tapped
+    document.querySelectorAll('.mobile-menu-link, .mobile-menu-auth button').forEach(el => {
+      el.addEventListener('click', () => toggleMobileMenu(false));
+    });
+
+    // Show floating button once the hero booking panel leaves the viewport
+    const sentinel = document.getElementById('panel-sentinel');
+    const floatBtn = document.getElementById('float-btn');
+
+    const obs = new IntersectionObserver(
+      ([entry]) => floatBtn.classList.toggle('show', !entry.isIntersecting),
+      { threshold: 0.05 }
+    );
+    obs.observe(sentinel);
+
+    // Highlight today's hours row
+    (function() {
+      const days = ['sun','mon','tue','wed','thu','fri','sat'];
+      const today = days[new Date().getDay()];
+      document.querySelectorAll('.hours-table tr').forEach(tr => {
+        const dayCell = tr.querySelector('td:first-child');
+        if (dayCell && dayCell.textContent.trim().toLowerCase() === today) {
+          tr.classList.add('today');
+        }
+      });
+    })();
+
+    // Clicking float button scrolls back to top (hero booking panel)
+    document.getElementById('float-inner').addEventListener('click', () => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  </script>
+  <!-- ══ TOAST ═══════════════════════════════════════ -->
+  <div class="toast" id="toast">
+    <div class="toast-check">&#10003;</div>
+    <span id="toastMsg">Spot reserved &mdash; complete your details below.</span>
+  </div>
+
+    <!-- ══ RESERVATION MODAL ═══════════════════════════════ -->
+  <div class="res-modal-backdrop" id="resModalBackdrop" role="dialog" aria-modal="true" aria-label="Spot reserved">
+    <div class="res-modal">
+      <button class="res-modal-close" id="resModalClose" aria-label="Close">&times;</button>
+
+      <!-- Confirmation header -->
+      <div class="res-confirm">
+        <div class="res-confirm-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+        </div>
+        <h3>Spot Reserved!</h3>
+        <p>Your appointment has been held. <strong>To earn loyalty points and manage your bookings,</strong> create a free account below.</p>
+      </div>
+
+      <!-- Sign Up panel -->
+      <div class="res-form-panel active" id="panelSignUp">
+        <div class="res-form-title">Create an account</div>
+        <div class="res-form-sub">Join Harbour Barbers rewards &amp; never miss a booking.</div>
+        <form onsubmit="handleResFormSubmit(event)">
+          <div class="res-field">
+            <label for="resName">Full Name</label>
+            <input type="text" id="resName" placeholder="John Murphy" autocomplete="name" required>
+          </div>
+          <div class="res-field">
+            <label for="resEmail">Email</label>
+            <input type="email" id="resEmail" placeholder="john@example.com" autocomplete="email" required>
+          </div>
+          <div class="res-field">
+            <label for="resPass">Password</label>
+            <input type="password" id="resPass" placeholder="Min. 8 characters" autocomplete="new-password" required minlength="8">
+          </div>
+          <button type="submit" class="res-submit">Sign Up &amp; Confirm Booking</button>
+        </form>
+        <div class="res-toggle">Already have an account? <a id="switchToSignIn">Sign in</a></div>
+      </div>
+
+      <!-- Sign In panel -->
+      <div class="res-form-panel" id="panelSignIn">
+        <div class="res-form-title">Welcome back</div>
+        <div class="res-form-sub">Sign in to confirm your booking &amp; add loyalty points.</div>
+        <form onsubmit="handleResFormSubmit(event)">
+          <div class="res-field">
+            <label for="siEmail">Email</label>
+            <input type="email" id="siEmail" placeholder="john@example.com" autocomplete="email" required>
+          </div>
+          <div class="res-field">
+            <label for="siPass">Password</label>
+            <input type="password" id="siPass" placeholder="Your password" autocomplete="current-password" required>
+          </div>
+          <button type="submit" class="res-submit">Sign In &amp; Confirm Booking</button>
+        </form>
+        <div class="res-toggle">Don&rsquo;t have an account? <a id="switchToSignUp">Sign up</a></div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    // Modal open/close
+    // panel: 'signup'|'signin', reserved: true = show confirmation header
+    function openResModal(panel, reserved) {
+      document.getElementById('resModalBackdrop').classList.add('open');
+      document.body.style.overflow = 'hidden';
+      // Show/hide confirmation header
+      const confirm = document.querySelector('.res-confirm');
+      confirm.style.display = (reserved === true) ? '' : 'none';
+      if (panel === 'signin') {
+        document.getElementById('panelSignIn').classList.add('active');
+        document.getElementById('panelSignUp').classList.remove('active');
+      } else {
+        document.getElementById('panelSignUp').classList.add('active');
+        document.getElementById('panelSignIn').classList.remove('active');
+      }
+    }
+
+    function closeResModal() {
+      document.getElementById('resModalBackdrop').classList.remove('open');
+      document.body.style.overflow = '';
+    }
+
+    document.getElementById('resModalClose').addEventListener('click', closeResModal);
+    document.getElementById('resModalBackdrop').addEventListener('click', function(e) {
+      if (e.target === this) closeResModal();
+    });
+
+    // Panel toggle
+    document.getElementById('switchToSignIn').addEventListener('click', function() {
+      document.getElementById('panelSignUp').classList.remove('active');
+      document.getElementById('panelSignIn').classList.add('active');
+    });
+    document.getElementById('switchToSignUp').addEventListener('click', function() {
+      document.getElementById('panelSignIn').classList.remove('active');
+      document.getElementById('panelSignUp').classList.add('active');
+    });
+
+    async function handleResFormSubmit(e) {
+      e.preventDefault();
+      const btn = e.target.querySelector('button[type="submit"]');
+      const origText = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = 'Please wait…';
+
+      const isSignUp = document.getElementById('panelSignUp').classList.contains('active');
+
+      try {
+        if (isSignUp) {
+          const name  = document.getElementById('resName').value.trim();
+          const email = document.getElementById('resEmail').value.trim();
+          const pass  = document.getElementById('resPass').value;
+          await window.API.signUp(email, pass, name);
+        } else {
+          const email = document.getElementById('siEmail').value.trim();
+          const pass  = document.getElementById('siPass').value;
+          await window.API.signIn(email, pass);
+        }
+        closeResModal();
+        window.location.href = 'portal.html';
+      } catch (err) {
+        const msg = isSignUp
+          ? document.querySelector('#panelSignUp .res-form-sub')
+          : document.querySelector('#panelSignIn .res-form-sub');
+        const orig = msg.textContent;
+        msg.style.color = '#c0392b';
+        msg.textContent = err.message;
+        setTimeout(() => { msg.style.color = ''; msg.textContent = orig; }, 4000);
+        btn.disabled = false;
+        btn.textContent = origText;
+      }
+    }
+
+    // Wire all reserve/book buttons to open the modal
+    document.addEventListener('DOMContentLoaded', function() {
+
+      // ── Panel validation
+      function validatePanel() {
+        const selects = document.querySelectorAll('.booking-panel .f-select');
+        let valid = true;
+        selects.forEach(function(sel) {
+          sel.classList.remove('input-error');
+          if (!sel.value) {
+            sel.classList.add('input-error');
+            sel.addEventListener('animationend', function() {
+              sel.classList.remove('input-error');
+              // re-add so shake can retrigger next time
+            }, { once: true });
+            valid = false;
+          }
+        });
+        const msg = document.getElementById('panelErrorMsg');
+        if (!valid) {
+          msg.textContent = 'Please select all options before reserving.';
+          setTimeout(function() { msg.textContent = ''; }, 3000);
+        }
+        return valid;
+      }
+
+      const panelBtn = document.getElementById('panelReserveBtn');
+      if (panelBtn) panelBtn.addEventListener('click', function() {
+        if (validatePanel()) {
+          showToast('Spot reserved — complete your details below.');
+          setTimeout(function() { openResModal('signup', true); }, 480);
+        }
+      });
+
+      // ── Strip validation
+      function validateStrip() {
+        const selects = document.querySelectorAll('.strip-inner .strip-sel');
+        let valid = true;
+        selects.forEach(function(sel) {
+          sel.classList.remove('input-error');
+          if (!sel.value) {
+            sel.classList.add('input-error');
+            sel.addEventListener('animationend', function() {
+              sel.style.animation = '';
+            }, { once: true });
+            valid = false;
+          }
+        });
+        const msg = document.getElementById('stripErrorMsg');
+        if (!valid) {
+          msg.textContent = 'Please fill in all fields.';
+          setTimeout(function() { msg.textContent = ''; }, 3000);
+        }
+        return valid;
+      }
+
+      const stripBtn = document.getElementById('stripReserveBtn');
+      if (stripBtn) stripBtn.addEventListener('click', function() {
+        if (validateStrip()) {
+          showToast('Spot reserved — complete your details below.');
+          setTimeout(function() { openResModal('signup', true); }, 480);
+        }
+      });
+
+      // Services book button — scroll to appointment form
+      const svcBtn = document.querySelector('.bsvc-book-btn');
+      if (svcBtn) svcBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+    });
+
+    // ESC to close
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') closeResModal();
+    });
+  </script>
+  <script>
+    // Service tab switching
+    document.querySelectorAll('.svc-tab').forEach(function(tab) {
+      tab.addEventListener('click', function() {
+        var target = this.getAttribute('data-tab');
+        document.querySelectorAll('.svc-tab').forEach(function(t) { t.classList.remove('active'); });
+        document.querySelectorAll('.svc-tab-content').forEach(function(c) { c.classList.remove('active'); });
+        tab.classList.add('active');
+        var el = document.getElementById('tab-' + target);
+        if (el) el.classList.add('active');
+      });
+    });
+  </script>
+  <script>
+    // Dynamic date population — generates next 7 available dates from today
+    (function() {
+      var DAYS   = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+      var MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      var open   = [false,true,true,true,true,true,true]; // Sun closed
+      function populate(id) {
+        var sel = document.getElementById(id);
+        if (!sel) return;
+        var d = new Date(), added = 0;
+        while (added < 7) {
+          d = new Date(d.getTime() + 86400000);
+          if (open[d.getDay()]) {
+            var opt = document.createElement('option');
+            opt.textContent = DAYS[d.getDay()]+' '+d.getDate()+' '+MONTHS[d.getMonth()];
+            sel.appendChild(opt);
+            added++;
+          }
+        }
+      }
+      populate('panelDateSel');
+      populate('stripDateSel');
+    })();
+  </script>
+
+  <script>
+    // Price sync — reads prices saved by Owner Dashboard → localStorage
+    (function() {
+      var KEY = 'hb_prices';
+      var DEFAULTS = {
+        'skin-fade':40,'mens-haircut':35,'shape-up':30,'hair-styling':20,
+        'kids-cut':25,'dad-son':55,'beard-only':25,'hot-towel-shave':55,
+        'shaving':20,'haircut-beard':55,'childrens-haircut':25
+      };
+      var FROM_KEYS = {'mens-haircut':true}; // prefix "from $"
+      var stored = {};
+      try { stored = JSON.parse(localStorage.getItem(KEY)||'{}'); } catch(e) {}
+      var prices = Object.assign({}, DEFAULTS, stored);
+      document.querySelectorAll('[data-price-key]').forEach(function(el) {
+        var k = el.getAttribute('data-price-key');
+        var v = prices[k];
+        if (v !== undefined) el.textContent = (FROM_KEYS[k] ? 'from $' : '$') + v;
+      });
+    })();
+  </script>
+  <script src="/config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="/api.js"></script>
+  <script src="image-slot.js"></script>
+  <script>
+    // Scroll-in entrance animations
+    (function() {
+      var targets = [].slice.call(document.querySelectorAll(
+        '.sec-inner, .bsvc-wrap, .about-inner, .gallery-grid, .contact-grid, .faq-layout, .reviews-static-grid'
+      ));
+      var obs = new IntersectionObserver(function(entries) {
+        entries.forEach(function(e) {
+          if (e.isIntersecting) { e.target.classList.add('visible'); obs.unobserve(e.target); }
+        });
+      }, { threshold: 0.06 });
+      targets.forEach(function(el) { el.classList.add('fade-up'); obs.observe(el); });
+    })();
+  </script>
+</body>
+</html>
