@@ -11,7 +11,7 @@
 
   async function req(method, path, body) {
     const t = await token()
-    const res = await fetch(`/api${path}`, {
+    const res = await fetch(`/backend${path}`, {
       method,
       headers: {
         'Content-Type': 'application/json',
