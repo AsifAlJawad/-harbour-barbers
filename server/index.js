@@ -55,16 +55,16 @@ app.get('/backend/debug', async (req, res) => {
   })
 })
 
-// One-time DB migration endpoint (protected by secret)
-app.post('/backend/migrate', async (req, res) => {
-  if (req.headers['x-migrate-secret'] !== 'harbour-setup-2024') {
+// One-time DB migration endpoint — visit in browser to apply schema
+app.get('/backend/migrate', async (req, res) => {
+  if (req.query.secret !== 'harbour-setup-2024') {
     return res.status(403).json({ error: 'Forbidden' })
   }
   try {
     const { default: db } = await import('./lib/db.js')
     const schema = readFileSync(new URL('../supabase/schema.sql', import.meta.url), 'utf8')
     await db.unsafe(schema)
-    res.json({ ok: true, message: 'Schema applied successfully' })
+    res.json({ ok: true, message: 'Schema applied — tables created and seeded!' })
   } catch (e) {
     res.status(500).json({ error: e.message })
   }
