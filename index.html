@@ -2654,7 +2654,12 @@
           await window.API.signIn(email, pass);
         }
         closeResModal();
-        window.location.href = 'portal.html';
+        try {
+          const me = await window.API.getMe();
+          if (me?.role === 'owner') window.location.href = 'owner.html';
+          else if (me?.role === 'staff') window.location.href = 'staff.html';
+          else window.location.href = 'portal.html';
+        } catch { window.location.href = 'portal.html'; }
       } catch (err) {
         const msg = isSignUp
           ? document.querySelector('#panelSignUp .res-form-sub')
