@@ -32,8 +32,13 @@ app.get('/config.js', (req, res) => {
 
 // Diagnostic route
 app.get('/backend/debug', (req, res) => {
+  let dbHost = 'MISSING'
+  if (process.env.DATABASE_URL) {
+    try { dbHost = new URL(process.env.DATABASE_URL).hostname } catch {}
+  }
   res.json({
-    DATABASE_URL: process.env.DATABASE_URL ? 'SET (' + process.env.DATABASE_URL.slice(0,40) + '...)' : 'MISSING',
+    DATABASE_URL: process.env.DATABASE_URL ? 'SET' : 'MISSING',
+    DATABASE_HOST: dbHost,
     DB_HOST: process.env.DB_HOST || 'MISSING',
     SUPABASE_URL: process.env.SUPABASE_URL ? 'set' : 'missing',
   })
