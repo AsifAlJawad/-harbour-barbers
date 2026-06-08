@@ -3,6 +3,7 @@ import express from 'express'
 import cors from 'cors'
 import path from 'path'
 import { fileURLToPath } from 'url'
+import { readFileSync } from 'fs'
 
 import authRouter         from './routes/auth.js'
 import servicesRouter     from './routes/services.js'
@@ -52,6 +53,21 @@ app.get('/backend/debug', async (req, res) => {
     SUPABASE_ANON_KEY:     process.env.SUPABASE_ANON_KEY     ? 'set' : 'missing',
     DB_TEST:               dbTest,
   })
+})
+
+// One-time DB migration endpoint (protected by secret)
+app.post('/backend/migrate', async (req, res) => {
+  if (req.headers['x-migrate-secret'] !== 'harbour-setup-2024') {
+    return res.status(403).json({ error: 'Forbidden' })
+  }
+  try {
+    const { default: db } = await import('./lib/db.js')
+    const schema = readFileSync(new URL('../supabase/schema.sql', import.meta.url), 'utf8')
+    await db.unsafe(schema)
+    res.json({ ok: true, message: 'Schema applied successfully' })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
 })
 
 // API routes (using /backend prefix to avoid Vercel/Supabase proxy on /api)
