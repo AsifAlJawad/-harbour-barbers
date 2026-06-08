@@ -42,7 +42,9 @@ app.use('/backend/owner',        ownerRouter)
 // Serve static files (HTML, uploads, JS)
 app.use(express.static(root))
 
-const PORT = process.env.PORT || 3000
-app.listen(PORT, () => {
-  console.log(`Harbour Barbers running at http://localhost:${PORT}`)
-})
+if (process.env.NODE_ENV !== 'production' || process.env.PORT) {
+  const PORT = process.env.PORT || 3000
+  app.listen(PORT, () => console.log(`Harbour Barbers running at http://localhost:${PORT}`))
+}
+
+export default app
