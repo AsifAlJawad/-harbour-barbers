@@ -30,6 +30,15 @@ app.get('/config.js', (req, res) => {
   )
 })
 
+// Diagnostic route
+app.get('/backend/debug', (req, res) => {
+  res.json({
+    DATABASE_URL: process.env.DATABASE_URL ? 'SET (' + process.env.DATABASE_URL.slice(0,40) + '...)' : 'MISSING',
+    DB_HOST: process.env.DB_HOST || 'MISSING',
+    SUPABASE_URL: process.env.SUPABASE_URL ? 'set' : 'missing',
+  })
+})
+
 // API routes (using /backend prefix to avoid Vercel/Supabase proxy on /api)
 app.use('/backend/auth',         authRouter)
 app.use('/backend/services',     servicesRouter)
