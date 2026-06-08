@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { supabase } from '../lib/supabase.js'
-import { requireStaff } from '../middleware/auth.js'
+import { requireStaff, requireOwner } from '../middleware/auth.js'
 
 const router = Router()
 
@@ -165,7 +165,7 @@ router.get('/customers', requireStaff, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }) }
 })
 
-router.put('/barbers/:id/availability', requireStaff, async (req, res) => {
+router.put('/barbers/:id/availability', requireOwner, async (req, res) => {
   const { available } = req.body
   if (typeof available !== 'boolean') return res.status(400).json({ error: 'available must be boolean' })
   try {

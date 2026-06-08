@@ -3,7 +3,6 @@ import express from 'express'
 import cors from 'cors'
 import path from 'path'
 import { fileURLToPath } from 'url'
-import { supabase } from './lib/supabase.js'
 
 import authRouter         from './routes/auth.js'
 import servicesRouter     from './routes/services.js'
@@ -29,23 +28,6 @@ app.get('/config.js', (req, res) => {
       supabaseAnonKey: process.env.SUPABASE_ANON_KEY || '',
     })};`
   )
-})
-
-// Diagnostic route
-app.get('/backend/debug', async (req, res) => {
-  let dbTest = 'not tested'
-  try {
-    const { data, error } = await supabase.from('services').select('count').limit(1)
-    dbTest = error ? error.message : 'OK'
-  } catch (e) {
-    dbTest = e.message
-  }
-  res.json({
-    SUPABASE_URL:      process.env.SUPABASE_URL          ? 'set' : 'missing',
-    SERVICE_KEY:       (process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY) ? 'set' : 'MISSING',
-    SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY     ? 'set' : 'missing',
-    DB_TEST:           dbTest,
-  })
 })
 
 
