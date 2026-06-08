@@ -32,7 +32,7 @@
     async signUp(email, password, full_name, phone) {
       const { data, error } = await sb.auth.signUp({
         email, password,
-        options: { emailRedirectTo: 'https://harbour-barbers.vercel.app/portal.html', data: { full_name, phone: phone || null } }
+        options: { emailRedirectTo: 'https://harbour-barbers.vercel.app/?verified=true', data: { full_name, phone: phone || null } }
       })
       if (error) throw new Error(error.message)
       return data

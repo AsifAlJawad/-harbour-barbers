@@ -2636,6 +2636,18 @@
           const email = document.getElementById('resEmail').value.trim();
           const pass  = document.getElementById('resPass').value;
           await window.API.signUp(email, pass, name);
+          // Show "check inbox" message instead of redirecting
+          const panel = document.getElementById('panelSignUp');
+          panel.innerHTML = '<div style="text-align:center;padding:24px 0">' +
+            '<div style="font-size:48px;margin-bottom:16px">✉️</div>' +
+            '<h3 style="font-size:20px;font-weight:700;margin-bottom:8px">Check your inbox</h3>' +
+            '<p style="color:#666;line-height:1.5">We sent a verification link to <strong>' + email + '</strong>.<br>' +
+            'Click the link in the email to verify your account,<br>then come back here to sign in.</p>' +
+            '<button onclick="closeResModal()" style="margin-top:20px;padding:10px 28px;background:#8b2020;color:#fff;border:none;border-radius:8px;font-size:15px;cursor:pointer">Got it</button>' +
+            '</div>';
+          btn.disabled = false;
+          btn.textContent = origText;
+          return;
         } else {
           const email = document.getElementById('siEmail').value.trim();
           const pass  = document.getElementById('siPass').value;
@@ -2655,6 +2667,18 @@
         btn.textContent = origText;
       }
     }
+
+    // Auto-open sign-in modal after email verification
+    document.addEventListener('DOMContentLoaded', function() {
+      if (new URLSearchParams(window.location.search).get('verified') === 'true') {
+        document.getElementById('resModal').style.display = 'flex';
+        document.getElementById('panelSignUp').classList.remove('active');
+        document.getElementById('panelSignIn').classList.add('active');
+        const sub = document.querySelector('#panelSignIn .res-form-sub');
+        if (sub) { sub.style.color = '#2e7d32'; sub.textContent = '✓ Email verified! Sign in to continue.'; }
+        history.replaceState({}, '', '/');
+      }
+    });
 
     // Wire all reserve/book buttons to open the modal
     document.addEventListener('DOMContentLoaded', function() {
