@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Harbour Barbers — Owner Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<script src="/config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="/api.js"></script>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+  :root{
+    --cream:#f7f5f0;--beige:#eeebe4;--tan:#ccc7be;
+    --accent:#8b2635;--dark:#18181a;--muted:#6a6560;
+    --serif:'Cormorant Garamond',Georgia,serif;
+    --sans:'DM Sans',system-ui,sans-serif;
+  }
+  *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+  html,body,#root{height:100%;}
+  body{font-family:var(--sans);color:var(--dark);overflow:hidden;}
+  @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+  button{cursor:pointer;font-family:var(--sans);border:none;background:none;}
+  input,select,textarea{font-family:var(--sans);}
+  ::-webkit-scrollbar{width:5px;}
+  ::-webkit-scrollbar-track{background:transparent;}
+  ::-webkit-scrollbar-thumb{background:var(--tan);border-radius:3px;}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect } = React;
+
+function useLoading(ms=700) {
+  const [loading,setLoading] = useState(true);
+  useEffect(()=>{const t=setTimeout(()=>setLoading(false),ms);return()=>clearTimeout(t);},[]);
+  return loading;
+}
+
+function Skel({w='100%',h='20px',r='8px',style={}}) {
+  return <div style={{width:w,height:h,borderRadius:r,background:'linear-gradient(90deg,var(--beige) 25%,var(--cream) 50%,var(--beige) 75%)',backgroundSize:'200% 100%',animation:'shimmer 1.4s infinite',...style}}/>;
+}
+
+function useIsMobile() {
+  const [mob, setMob] = useState(window.innerWidth < 768);
+  useEffect(() => {
+    const h = () => setMob(window.innerWidth < 768);
+    window.addEventListener('resize', h);
+    return () => window.removeEventListener('resize', h);
+  }, []);
+  return mob;
+}
+
+// ── Data ──────────────────────────────────────────────
+const WEEKLY = {
+  labels:  ['Mon','Tue','Wed','Thu','Fri','Sat'],
+  revenue: [280,350,415,290,380,460],
+};
+const MONTHLY = {
+  labels:  ['Jan','Feb','Mar','Apr','May','Jun'],
+  revenue: [8200,9100,7800,10200,9600,11400],
+};
+const DAILY_HOURS = {
+  labels: ['9am','10','11','12','1pm','2','3','4','5'],
+  pct:    [55,80,95,70,40,75,88,65,30],
+};
+const BARBERS = [
+  {name:'Marco',initials:'M',bookings:48,revenue:1920,noShows:2,avgVal:40,color:'#8b2635'},
+  {name:'James',initials:'J',bookings:52,revenue:2340,noShows:1,avgVal:45,color:'#2a4a7a'},
+  {name:'Sofia', initials:'S',bookings:38,revenue:1425,noShows:3,avgVal:37,color:'#2a6a4a'},
+];
+const SERVICES = [
+  {name:'Skin Fade',bookings:42,revenue:1680},
+  {name:'Classic Haircut',bookings:38,revenue:1330},
+  {name:'Hair + Beard',bookings:24,revenue:1320},
+  {name:'Hot Towel Shave',bookings:18,revenue:990},
+  {name:'Beard Trim',bookings:16,revenue:400},
+];
+const REMAINING = [
+  {time:'11:00 AM',client:'Chris P.',service:'Hair + Beard',barber:'James'},
+  {time:'11:30 AM',client:'Dan R.',service:'Classic Haircut',barber:'Sofia'},
+  {time:'2:00 PM', client:'Mike L.',service:'Hot Towel Shave',barber:'Marco'},
+  {time:'3:00 PM', client:'Jake T.',service:'Skin Fade',barber:'James'},
+];
+
+const INIT_HOURS_OWNER = [
+  {day:'Monday',open:'9:00 AM',close:'6:00 PM',closed:false},
+  {day:'Tuesday',open:'9:00 AM',close:'6:00 PM',closed:false},
+  {day:'Wednesday',open:'9:00 AM',close:'6:00 PM',closed:false},
+  {day:'Thursday',open:'9:00 AM',close:'7:00 PM',closed:false},
+  {day:'Friday',open:'9:00 AM',close:'6:00 PM',closed:false},
+  {day:'Saturday',open:'10:00 AM',close:'5:00 PM',closed:false},
+  {day:'Sunday',open:'',close:'',closed:true},
+];
+
+// ── Icon ──────────────────────────────────────────────
+function Ico({d,size=16}) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d={d}/>
+    </svg>
+  );
+}
+
+// ── Charts ────────────────────────────────────────────
+function BarChart({data,labels,color='var(--accent)',unit='$'}) {
+  const [ready,setReady]=useState(false);
+  useEffect(()=>{const t=setTimeout(()=>setReady(true),80);return()=>clearTimeout(t);},[]);
+  const max = Math.max(...data);
+  const W=54,PAD=4,H=110;
+  return (
+    <svg viewBox={'0 0 '+(data.length*W)+' '+(H+24)} style={{width:'100%',height:'130px',overflow:'visible'}}>
+      {data.map((val,i) => {
+        const barH = max ? Math.max((val/max)*(H-20), val?4:0) : 0;
+        const x=i*W+PAD, y=H-barH;
+        const cx=x+(W-PAD*2)/2;
+        return (
+          <g key={i}>
+            <rect x={x} y={y} width={W-PAD*2} height={barH} fill={color} rx="3" opacity="0.88"
+              style={{transformOrigin:cx+'px '+H+'px',transform:ready?'scaleY(1)':'scaleY(0)',transition:'transform 0.6s cubic-bezier(0.34,1.3,0.64,1) '+(i*0.07)+'s'}}/>
+            <text x={i*W+W/2} y={H+16} textAnchor="middle" fontSize="11" fill="var(--muted)" fontFamily="var(--sans)">{labels[i]}</text>
+            {val>0 && <text x={i*W+W/2} y={y-5} textAnchor="middle" fontSize="10" fill={color} fontFamily="var(--sans)" fontWeight="600">{unit}{val>=1000?Math.round(val/100)/10+'k':val}</text>}
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
+function LineChart({data,labels}) {
+  const max=Math.max(...data), min=Math.min(...data)*0.85;
+  const W=600,H=90,n=data.length;
+  const px=i=>(i/(n-1))*W, py=v=>H-((v-min)/(max-min))*H;
+  const pts=data.map((v,i)=>`${px(i)},${py(v)}`).join(' ');
+  const area=`M${px(0)},${H} `+data.map((v,i)=>`L${px(i)},${py(v)}`).join(' ')+` L${px(n-1)},${H} Z`;
+  return (
+    <svg viewBox={`0 0 ${W} ${H+28}`} style={{width:'100%',height:'120px',overflow:'visible'}}>
+      <defs>
+        <linearGradient id="ag" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="var(--accent)" stopOpacity="0.18"/>
+          <stop offset="100%" stopColor="var(--accent)" stopOpacity="0"/>
+        </linearGradient>
+      </defs>
+      <path d={area} fill="url(#ag)"/>
+      <polyline points={pts} fill="none" stroke="var(--accent)" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round"/>
+      {data.map((v,i) => (
+        <g key={i}>
+          <circle cx={px(i)} cy={py(v)} r="4" fill="var(--accent)"/>
+          <text x={px(i)} y={H+20} textAnchor="middle" fontSize="11" fill="var(--muted)" fontFamily="var(--sans)">{labels[i]}</text>
+        </g>
+      ))}
+    </svg>
+  );
+}
+
+function HeatBar({label,pct}) {
+  const col = pct>75?'var(--accent)':pct>45?'#c2793a':'var(--tan)';
+  return (
+    <div style={{display:'flex',alignItems:'center',gap:'10px',marginBottom:'7px'}}>
+      <div style={{width:'34px',fontSize:'11px',color:'var(--muted)',textAlign:'right',flexShrink:0}}>{label}</div>
+      <div style={{flex:1,height:'9px',background:'var(--beige)',borderRadius:'5px',overflow:'hidden'}}>
+        <div style={{height:'100%',width:pct+'%',background:col,borderRadius:'5px'}}/>
+      </div>
+      <div style={{width:'30px',fontSize:'11px',color:col,fontWeight:'600',textAlign:'right',flexShrink:0}}>{pct}%</div>
+    </div>
+  );
+}
+
+function KpiCard({label,value,sub,trend,accent}) {
+  const up = trend>=0;
+  return (
+    <div style={{background:accent?'var(--dark)':'#fff',border:`1px solid ${accent?'transparent':'var(--beige)'}`,borderRadius:'12px',padding:'16px 18px'}}>
+      <div style={{fontSize:'10px',fontWeight:'600',letterSpacing:'0.1em',textTransform:'uppercase',color:accent?'rgba(255,255,255,0.4)':'var(--muted)',marginBottom:'8px'}}>{label}</div>
+      <div style={{fontFamily:'var(--serif)',fontSize:'30px',fontWeight:'700',lineHeight:'1',color:accent?'#fff':'var(--dark)',marginBottom:'5px'}}>{value}</div>
+      <div style={{display:'flex',alignItems:'center',gap:'5px',flexWrap:'wrap'}}>
+        {trend!==undefined && <span style={{fontSize:'11px',color:up?'#2a7a3a':'var(--accent)',fontWeight:'600'}}>{up?'↑':'↓'} {Math.abs(trend)}%</span>}
+        <span style={{fontSize:'11px',color:accent?'rgba(255,255,255,0.38)':'var(--muted)'}}>{sub}</span>
+      </div>
+    </div>
+  );
+}
+
+function SBadge({status}) {
+  const map = {
+    done:      {bg:'#f0f0f0',color:'#666',label:'Done'},
+    active:    {bg:'#e8f4ea',color:'#2a7a3a',label:'In Chair'},
+    confirmed: {bg:'#eef2ff',color:'#3730a3',label:'Confirmed'},
+    noshow:    {bg:'#fff7ed',color:'#c2410c',label:'No Show'},
+  };
+  const s=map[status]||map.confirmed;
+  return <span style={{fontSize:'11px',padding:'3px 9px',borderRadius:'100px',background:s.bg,color:s.color,fontWeight:'600',whiteSpace:'nowrap'}}>{s.label}</span>;
+}
+
+// ── Mobile Shell ───────────────────────────────────────
+function MobileHeader() {
+  return (
+    <div style={{background:'var(--dark)',padding:'13px 20px',display:'flex',alignItems:'center',justifyContent:'space-between',borderBottom:'1px solid rgba(255,255,255,0.07)',flexShrink:0}}>
+      <div style={{fontFamily:'var(--serif)',fontSize:'17px',fontWeight:'700',color:'#f7f5f0',letterSpacing:'0.04em',textTransform:'uppercase'}}>
+        Harbour <span style={{color:'var(--accent)'}}>Barbers</span>
+      </div>
+      <div style={{background:'rgba(255,255,255,0.08)',borderRadius:'6px',padding:'3px',display:'flex',gap:'2px'}}>
+        <button style={{padding:'4px 11px',borderRadius:'4px',fontSize:'11px',fontWeight:'500',background:'rgba(255,255,255,0.15)',color:'#f7f5f0',border:'none',cursor:'default'}}>Owner</button>
+        <a href="staff.html" style={{padding:'4px 11px',borderRadius:'4px',fontSize:'11px',fontWeight:'500',background:'none',color:'rgba(255,255,255,0.4)',border:'none',cursor:'pointer',textDecoration:'none'}}>Staff View</a>
+      </div>
+    </div>
+  );
+}
+
+function MobileNav({items,view,setView}) {
+  return (
+    <nav style={{background:'var(--dark)',borderTop:'1px solid rgba(255,255,255,0.1)',display:'flex',flexShrink:0,paddingBottom:'env(safe-area-inset-bottom,0px)'}}>
+      {items.map(item => {
+        const active = view===item.id;
+        return (
+          <button key={item.id} onClick={()=>setView(item.id)} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:'3px',padding:'10px 2px 12px',border:'none',background:'none',cursor:'pointer',color:active?'#fff':'rgba(255,255,255,0.4)',transition:'color 0.15s',position:'relative'}}>
+            {active && <div style={{position:'absolute',top:0,left:'50%',transform:'translateX(-50%)',width:'20px',height:'2px',background:'var(--accent)',borderRadius:'0 0 2px 2px'}}/>}
+            <Ico d={item.d} size={18}/>
+            <span style={{fontSize:'9.5px',fontWeight:active?'600':'400'}}>{item.short||item.label}</span>
+          </button>
+        );
+      })}
+    </nav>
+  );
+}
+
+// ── Desktop Sidebar ────────────────────────────────────
+const NAV = [
+  {id:'overview', label:'Overview',        short:'Home',      d:'M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z'},
+  {id:'analytics',label:'Analytics',       short:'Analytics', d:'M18 20V10M12 20V4M6 20v-6'},
+  {id:'staff',    label:'Staff & Payroll', short:'Staff',     d:'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75M9 7a4 4 0 100 8 4 4 0 000-8z'},
+  {id:'settings', label:'Settings',        short:'Settings',  d:'M12 15a3 3 0 100-6 3 3 0 000 6zM19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z'},
+];
+
+
+function Sidebar({view,setView}) {
+  return (
+    <div style={{width:'252px',minWidth:'252px',height:'100%',background:'var(--dark)',display:'flex',flexDirection:'column'}}>
+      <div style={{padding:'26px 28px 20px',borderBottom:'1px solid rgba(255,255,255,0.07)'}}>
+        <div style={{fontFamily:'var(--serif)',fontSize:'19px',fontWeight:'700',color:'#f7f5f0',letterSpacing:'0.04em',textTransform:'uppercase'}}>
+          Harbour <span style={{color:'var(--accent)'}}>Barbers</span>
+        </div>
+        <div style={{fontSize:'11px',color:'rgba(255,255,255,0.3)',letterSpacing:'0.14em',textTransform:'uppercase',marginTop:'3px'}}>{'Owner Portal'}</div>
+      </div>
+      <div style={{padding:'18px 28px 16px',borderBottom:'1px solid rgba(255,255,255,0.07)'}}>
+        <div style={{display:'flex',alignItems:'center',gap:'11px',marginBottom:'12px'}}>
+          <div style={{width:'40px',height:'40px',borderRadius:'50%',background:'var(--accent)',color:'#fff',fontFamily:'var(--serif)',fontWeight:'700',fontSize:'18px',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>{'O'}</div>
+          <div>
+            <div style={{color:'#f7f5f0',fontWeight:'500',fontSize:'14px'}}>{'Owner'}</div>
+            <div style={{display:'flex',alignItems:'center',gap:'5px',marginTop:'2px'}}>
+              <div style={{width:'6px',height:'6px',borderRadius:'50%',background:'#4ade80'}}/>
+              <div style={{color:'rgba(255,255,255,0.35)',fontSize:'12px'}}>{'Full Access'}</div>
+            </div>
+          </div>
+        </div>
+        <div style={{background:'rgba(255,255,255,0.06)',borderRadius:'7px',padding:'4px',display:'flex',gap:'3px'}}>
+          <button style={{flex:1,padding:'5px',borderRadius:'5px',fontSize:'12px',fontWeight:'500',background:'rgba(255,255,255,0.12)',color:'#f7f5f0',border:'none',cursor:'default'}}>Owner</button>
+          <a href="staff.html" style={{flex:1,padding:'5px',borderRadius:'5px',fontSize:'12px',fontWeight:'500',background:'none',color:'rgba(255,255,255,0.35)',border:'none',cursor:'pointer',textDecoration:'none',textAlign:'center',display:'block'}}>Staff View</a>
+        </div>
+      </div>
+      <nav style={{flex:1,padding:'12px 0',overflowY:'auto'}}>
+        {NAV.map(item => {
+          const active = view===item.id;
+          return (
+            <button key={item.id} onClick={()=>setView(item.id)} style={{display:'flex',alignItems:'center',gap:'11px',padding:'10px 28px',color:active?'#f7f5f0':'rgba(255,255,255,0.4)',background:active?'rgba(255,255,255,0.06)':'none',fontSize:'13.5px',fontWeight:active?'500':'400',cursor:'pointer',border:'none',width:'100%',textAlign:'left',borderLeft:active?'2px solid var(--accent)':'2px solid transparent',transition:'all 0.14s'}}>
+              <Ico d={item.d}/> {item.label}
+            </button>
+          );
+        })}
+      </nav>
+      <div style={{padding:'18px 28px',borderTop:'1px solid rgba(255,255,255,0.07)',display:'flex',flexDirection:'column',gap:'10px'}}>
+        <a href="index.html" style={{color:'rgba(255,255,255,0.3)',fontSize:'13px',textDecoration:'none',display:'flex',alignItems:'center',gap:'6px'}}>
+          <Ico d="M19 12H5M12 19l-7-7 7-7" size={14}/> Back to site
+        </a>
+        <button onClick={async()=>{await window.API.signOut();window.location.href='index.html';}} style={{color:'rgba(255,255,255,0.25)',fontSize:'12px',background:'none',border:'none',cursor:'pointer',textAlign:'left',padding:0,display:'flex',alignItems:'center',gap:'6px',fontFamily:'var(--sans)'}}>
+          <Ico d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" size={13}/> Sign Out
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── Overview ───────────────────────────────────────────
+function OverviewView({isMobile}) {
+  const loading = useLoading(700);
+  const totalRevWeek = WEEKLY.revenue.reduce((a,b)=>a+b,0);
+  if (loading) return (
+    <div>
+      <Skel w='220px' h='30px' r='6px' style={{marginBottom:'8px'}}/>
+      <Skel w='160px' h='14px' r='4px' style={{marginBottom:'22px'}}/>
+      <div style={{display:'grid',gridTemplateColumns:isMobile?'1fr 1fr':'1.2fr 1fr 1fr 1fr',gap:'10px',marginBottom:'14px'}}>
+        {[0,1,2,3].map(i=><Skel key={i} h='88px' r='12px'/>)}
+      </div>
+      <div style={{display:'grid',gridTemplateColumns:isMobile?'1fr':'1.6fr 1fr',gap:'12px',marginBottom:'12px'}}>
+        <Skel h='210px' r='13px'/><Skel h='210px' r='13px'/>
+      </div>
+      <Skel h='160px' r='13px'/>
+    </div>
+  );
+  return (
+    <div>
+      <div style={{marginBottom:'20px'}}>
+        <div style={{fontFamily:'var(--serif)',fontSize:'12px',color:'var(--muted)',letterSpacing:'0.06em',textTransform:'uppercase',marginBottom:'4px'}}>{new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}</div>
+        <div style={{fontFamily:'var(--serif)',fontSize:isMobile?'26px':'36px',fontWeight:'700',lineHeight:'1'}}>Good morning 👋</div>
+      </div>
+      <div style={{display:'grid',gridTemplateColumns:isMobile?'1fr 1fr':'1.2fr 1fr 1fr 1fr',gap:'10px',marginBottom:'14px'}}>
+        <KpiCard label="Today's Revenue" value="$415" sub="vs $340 yesterday" trend={22} accent/>
+        <KpiCard label="This Week" value={'$'+totalRevWeek.toLocaleString()} sub="Mon – today" trend={8}/>
+        <KpiCard label="This Month" value="$11,400" sub="Jun 2026" trend={18}/>
+        <KpiCard label="Customers" value="124" sub="active this month" trend={5}/>
+      </div>
+      <div style={{display:'grid',gridTemplateColumns:isMobile?'1fr':'1.6fr 1fr',gap:'12px',marginBottom:'12px'}}>
+        <div style={{background:'#fff',border:'1px solid var(--beige)',borderRadius:'13px',padding:'18px 20px'}}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'14px'}}>
+            <div style={{fontFamily:'var(--serif)',fontSize:'18px',fontWeight:'600'}}>Weekly Revenue</div>
+            <div style={{fontSize:'12px',color:'var(--muted)'}}>This week</div>
+          </div>
+          <BarChart data={WEEKLY.revenue} labels={WEEKLY.labels}/>
+        </div>
+        <div style={{background:'#fff',border:'1px solid var(--beige)',borderRadius:'13px',padding:'18px 20px'}}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'12px'}}>
+            <div style={{fontFamily:'var(--serif)',fontSize:'18px',fontWeight:'600'}}>Remaining Today</div>
+            <span style={{fontSize:'12px',background:'var(--beige)',padding:'3px 9px',borderRadius:'100px',color:'var(--muted)'}}>{REMAINING.length}</span>
+          </div>
+          {REMAINING.map((r,i) => (
+            <div key={i} style={{display:'flex',alignItems:'center',gap:'10px',padding:'8px 0',borderBottom:i<REMAINING.length-1?'1px solid var(--beige)':'none'}}>
+              <div style={{fontSize:'12px',color:'var(--muted)',width:'56px',flexShrink:0}}>{r.time}</div>
+              <div style={{flex:1}}>
+                <div style={{fontSize:'13px',fontWeight:'500'}}>{r.client}</div>
+                <div style={{fontSize:'11px',color:'var(--muted)'}}>{r.service}</div>
+              </div>
+              <div style={{fontSize:'12px',color:'var(--muted)'}}>{r.barber}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div style={{background:'#fff',border:'1px solid var(--beige)',borderRadius:'13px',padding:'18px 20px'}}>
+        <div style={{fontFamily:'var(--serif)',fontSize:'18px',fontWeight:'600',marginBottom:'14px'}}>Top Services This Month</div>
+        <div style={{display:'grid',gridTemplateColumns:isMobile?'1fr 1fr':'repeat(5,1fr)',gap:'10px'}}>
+          {SERVICES.map((s,i) => {
+            const maxRev=SERVICES[0].revenue;
+            return (
+              <div key={s.name} style={{background:i===0?'var(--dark)':'var(--cream)',borderRadius:'10px',padding:'13px 12px',textAlign:'center',position:'relative'}}>
+                {i===0 && <div style={{position:'absolute',top:'8px',right:'10px',fontSize:'10px',color:'rgba(255,255,255,0.4)',fontWeight:'600'}}>#1</div>}
+                <div style={{fontFamily:'var(--serif)',fontSize:'21px',fontWeight:'700',color:i===0?'#fff':'var(--accent)',marginBottom:'2px'}}>${(s.revenue/1000).toFixed(1)}k</div>
+                <div style={{fontSize:'12px',fontWeight:'500',color:i===0?'rgba(255,255,255,0.85)':'var(--dark)',marginBottom:'2px',lineHeight:'1.3'}}>{s.name}</div>
+                <div style={{fontSize:'11px',color:i===0?'rgba(255,255,255,0.4)':'var(--muted)'}}>{s.bookings} bookings</div>
+                <div style={{height:'3px',background:i===0?'rgba(255,255,255,0.15)':'var(--beige)',borderRadius:'2px',marginTop:'8px',overflow:'hidden'}}>
+                  <div style={{height:'100%',width:Math.round(s.revenue/maxRev*100)+'%',background:i===0?'var(--accent)':'var(--tan)',borderRadius:'2px'}}/>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Analytics ──────────────────────────────────────────
+function AnalyticsView({isMobile}) {
+  return (
+    <div>
+      <div style={{fontFamily:'var(--serif)',fontSize:isMobile?'26px':'36px',fontWeight:'700',marginBottom:'4px'}}>Analytics</div>
+      <div style={{color:'var(--muted)',fontSize:'13px',marginBottom:'20px'}}>Revenue trends, service performance, and traffic patterns</div>
+      <div style={{background:'#fff',border:'1px solid var(--beige)',borderRadius:'13px',padding:'20px 22px',marginBottom:'12px'}}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:isMobile?'flex-start':'center',flexDirection:isMobile?'column':'row',gap:isMobile?'6px':'0',marginBottom:'16px'}}>
+          <div>
+            <div style={{fontFamily:'var(--serif)',fontSize:'19px',fontWeight:'600'}}>Revenue Trend</div>
+            <div style={{fontSize:'12px',color:'var(--muted)',marginTop:'2px'}}>Jan – Jun 2026</div>
+          </div>
+          <div style={{fontFamily:'var(--serif)',fontSize:isMobile?'22px':'28px',fontWeight:'700',color:'var(--accent)'}}>$56,300 <span style={{fontSize:'13px',color:'#2a7a3a',fontFamily:'var(--sans)',fontWeight:'400'}}>↑ 14% YoY</span></div>
+        </div>
+        <LineChart data={MONTHLY.revenue} labels={MONTHLY.labels}/>
+      </div>
+      <div style={{display:'grid',gridTemplateColumns:isMobile?'1fr':'1fr 1fr',gap:'12px'}}>
+        <div style={{background:'#fff',border:'1px solid var(--beige)',borderRadius:'13px',padding:'20px 22px'}}>
+          <div style={{fontFamily:'var(--serif)',fontSize:'18px',fontWeight:'600',marginBottom:'16px'}}>Revenue by Service</div>
+          {SERVICES.map(s => {
+            const maxR=SERVICES[0].revenue;
+            return (
+              <div key={s.name} style={{marginBottom:'12px'}}>
+                <div style={{display:'flex',justifyContent:'space-between',fontSize:'13.5px',marginBottom:'4px'}}>
+                  <span style={{fontWeight:'500'}}>{s.name}</span>
+                  <span style={{fontFamily:'var(--serif)',fontWeight:'700',color:'var(--accent)'}}>${s.revenue.toLocaleString()}</span>
+                </div>
+                <div style={{height:'6px',background:'var(--beige)',borderRadius:'3px',overflow:'hidden'}}>
+                  <div style={{height:'100%',width:Math.round(s.revenue/maxR*100)+'%',background:'var(--accent)',borderRadius:'3px'}}/>
+                </div>
+                <div style={{fontSize:'11px',color:'var(--muted)',marginTop:'2px'}}>{s.bookings} bookings</div>
+              </div>
+            );
+          })}
+        </div>
+        <div style={{background:'#fff',border:'1px solid var(--beige)',borderRadius:'13px',padding:'20px 22px'}}>
+          <div style={{fontFamily:'var(--serif)',fontSize:'18px',fontWeight:'600',marginBottom:'4px'}}>Busiest Hours</div>
+          <div style={{fontSize:'12px',color:'var(--muted)',marginBottom:'14px'}}>Average chair utilisation by hour</div>
+          {DAILY_HOURS.labels.map((l,i) => <HeatBar key={l} label={l} pct={DAILY_HOURS.pct[i]}/>)}
+          <div style={{marginTop:'12px',display:'flex',gap:'12px',flexWrap:'wrap'}}>
+            {[['var(--accent)','Peak'],['#c2793a','Moderate'],['var(--tan)','Quiet']].map(([c,l]) => (
+              <div key={l} style={{display:'flex',alignItems:'center',gap:'5px'}}>
+                <div style={{width:'9px',height:'9px',borderRadius:'2px',background:c}}/>
+                <span style={{fontSize:'11px',color:'var(--muted)'}}>{l}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Staff & Payroll ────────────────────────────────────
+function StaffView({isMobile}) {
+  const totalRev = BARBERS.reduce((s,b)=>s+b.revenue,0);
+  return (
+    <div>
+      <div style={{fontFamily:'var(--serif)',fontSize:isMobile?'26px':'36px',fontWeight:'700',marginBottom:'4px'}}>Staff & Payroll</div>
+      <div style={{color:'var(--muted)',fontSize:'13px',marginBottom:'20px'}}>June 2026 performance summary</div>
+      <div style={{display:'grid',gridTemplateColumns:isMobile?'1fr':'repeat(3,1fr)',gap:'12px',marginBottom:'14px'}}>
+        {BARBERS.map((b,rank) => (
+          <div key={b.name} style={{background:rank===0?'var(--dark)':'#fff',border:`1px solid ${rank===0?'transparent':'var(--beige)'}`,borderRadius:'13px',padding:'20px',position:'relative'}}>
+            {rank===0 && <div style={{position:'absolute',top:'14px',right:'16px',fontSize:'10px',color:'rgba(255,255,255,0.35)',letterSpacing:'0.08em'}}>TOP EARNER</div>}
+            <div style={{display:'flex',alignItems:'center',gap:'12px',marginBottom:'12px'}}>
+              <div style={{width:'46px',height:'46px',borderRadius:'50%',background:b.color,color:'#fff',fontFamily:'var(--serif)',fontWeight:'700',fontSize:'19px',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>{b.initials}</div>
+              <div>
+                <div style={{fontFamily:'var(--serif)',fontSize:'20px',fontWeight:'700',color:rank===0?'#fff':'var(--dark)',marginBottom:'1px'}}>{b.name}</div>
+                <div style={{fontSize:'12px',color:rank===0?'rgba(255,255,255,0.4)':'var(--muted)'}}>{b.bookings} bookings this month</div>
+              </div>
+            </div>
+            <div style={{fontFamily:'var(--serif)',fontSize:'30px',fontWeight:'700',color:rank===0?'rgba(255,255,255,0.9)':'var(--accent)',marginBottom:'2px'}}>${b.revenue.toLocaleString()}</div>
+            <div style={{fontSize:'12px',color:rank===0?'rgba(255,255,255,0.35)':'var(--muted)',marginBottom:'12px'}}>revenue generated</div>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'8px'}}>
+              {[['Avg/booking','$'+b.avgVal],['No-shows',b.noShows]].map(([l,v]) => (
+                <div key={l} style={{background:rank===0?'rgba(255,255,255,0.07)':'var(--cream)',borderRadius:'7px',padding:'9px 10px'}}>
+                  <div style={{fontSize:'10px',color:rank===0?'rgba(255,255,255,0.35)':'var(--muted)',letterSpacing:'0.08em',textTransform:'uppercase',marginBottom:'2px'}}>{l}</div>
+                  <div style={{fontSize:'16px',fontFamily:'var(--serif)',fontWeight:'700',color:rank===0?'#fff':'var(--dark)'}}>{v}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+      <div style={{background:'#fff',border:'1px solid var(--beige)',borderRadius:'13px',padding:'20px 22px'}}>
+        <div style={{fontFamily:'var(--serif)',fontSize:'18px',fontWeight:'600',marginBottom:'14px'}}>Revenue Split</div>
+        {BARBERS.map(b => (
+          <div key={b.name} style={{marginBottom:'13px'}}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'5px'}}>
+              <div style={{display:'flex',alignItems:'center',gap:'8px'}}>
+                <div style={{width:'8px',height:'8px',borderRadius:'50%',background:b.color,flexShrink:0}}/>
+                <span style={{fontSize:'14px',fontWeight:'500'}}>{b.name}</span>
+              </div>
+              <div style={{display:'flex',alignItems:'center',gap:'10px'}}>
+                <span style={{fontSize:'12px',color:'var(--muted)'}}>{Math.round(b.revenue/totalRev*100)}%</span>
+                <span style={{fontFamily:'var(--serif)',fontSize:'16px',fontWeight:'700',color:'var(--accent)'}}>${b.revenue.toLocaleString()}</span>
+              </div>
+            </div>
+            <div style={{height:'8px',background:'var(--beige)',borderRadius:'4px',overflow:'hidden'}}>
+              <div style={{height:'100%',width:Math.round(b.revenue/totalRev*100)+'%',background:b.color,borderRadius:'4px'}}/>
+            </div>
+          </div>
+        ))}
+        <div style={{marginTop:'14px',paddingTop:'12px',borderTop:'1px solid var(--beige)',display:'flex',justifyContent:'space-between'}}>
+          <span style={{fontSize:'14px',fontWeight:'500'}}>Total Revenue (June)</span>
+          <span style={{fontFamily:'var(--serif)',fontSize:'19px',fontWeight:'700',color:'var(--accent)'}}>${totalRev.toLocaleString()}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Settings ───────────────────────────────────────────
+function SettingsView({isMobile}) {
+  const [stab,setStab] = useState('contact');
+  const [contact,setContact] = useState({address:'4857 Elliott St Unit 107, Delta, BC V4K 2X7',phone:'+1 (604) 946-8033',email:'info@harbourbarbers.ca'});
+  const [hours,setHours] = useState(INIT_HOURS_OWNER);
+  const [photos,setPhotos] = useState(Array(6).fill(null));
+  const [tweaks,setTweaks] = useState({accent:'#8b2635',shopName:'Harbour Barbers',tagline:'Precision cuts. Classic craft.',heroText:'Where Sharp Minds Get Sharp Looks'});
+  const [prefs,setPrefs] = useState({loyalty:true,onlineBooking:true,window:14,cancelHours:24,commission:40});
+  const [saved,setSaved] = useState(false);
+  const save = () => {setSaved(true);setTimeout(()=>setSaved(false),2200);};
+  const inp = {padding:'8px 11px',border:'1.5px solid var(--beige)',borderRadius:'7px',fontSize:'13.5px',color:'var(--dark)',background:'#fff',outline:'none',width:'100%'};
+  const lbl = {fontSize:'10px',fontWeight:'600',color:'var(--muted)',letterSpacing:'0.1em',textTransform:'uppercase',marginBottom:'4px'};
+  const ACCENT_SWATCHES = ['#8b2635','#2a4a7a','#2a6a4a','#3d3530'];
+  const SWATCH_NAMES = ['Harbour Red','Navy','Forest','Espresso'];
+  const TABS = [{id:'contact',label:'Contact'},{id:'hours',label:'Hours'},{id:'pricing',label:'Pricing'},{id:'gallery',label:'Gallery'},{id:'tweaks',label:'Site Tweaks'},{id:'rules',label:'Rules'}];
+  const HB_PRICE_KEY = 'hb_prices';
+  const DEFAULT_PRICES = [
+    {key:'skin-fade',       label:'Skin Fade',          tab:'Haircuts', price:40},
+    {key:'mens-haircut',    label:"Men's Haircut",       tab:'Haircuts', price:35},
+    {key:'shape-up',        label:'Shape Up',           tab:'Haircuts', price:30},
+    {key:'hair-styling',    label:'Hair Styling',       tab:'Haircuts', price:20},
+    {key:'kids-cut',        label:"Kids' Cut",           tab:'Haircuts', price:25},
+    {key:'dad-son',         label:'Dad + Son',          tab:'Haircuts', price:55},
+    {key:'beard-only',      label:'Beard Only',         tab:'Beard',    price:25},
+    {key:'hot-towel-shave', label:'Hot Towel Shave',    tab:'Beard',    price:55},
+    {key:'shaving',         label:'Shaving',            tab:'Beard',    price:20},
+    {key:'haircut-beard',   label:'Haircut + Beard',    tab:'Packages', price:55},
+    {key:'childrens-haircut',label:"Children's Haircut",tab:'Packages', price:25},
+  ];
+  const loadPrices = () => {
+    try { const s = JSON.parse(localStorage.getItem(HB_PRICE_KEY)||'{}'); return DEFAULT_PRICES.map(p=>({...p,price:s[p.key]!==undefined?s[p.key]:p.price})); }
+    catch(e) { return DEFAULT_PRICES.map(p=>({...p})); }
+  };
+  const [svPrices, setSvPrices] = useState(loadPrices);
+  const [pricesSaved, setPricesSaved] = useState(false);
+  const savePrices = () => {
+    const obj = {}; svPrices.forEach(p=>{ obj[p.key]=Number(p.price); });
+    localStorage.setItem(HB_PRICE_KEY, JSON.stringify(obj));
+    setPricesSaved(true); setTimeout(()=>setPricesSaved(false),2200);
+  };
+  const handlePhotoUpload = (idx,file) => {
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    setPhotos(prev=>prev.map((p,i)=>i===idx?{url,name:file.name}:p));
+  };
+  return (
+    <div style={{maxWidth:isMobile?'none':'680px'}}>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:isMobile?'flex-start':'center',flexDirection:isMobile?'column':'row',gap:isMobile?'12px':'0',marginBottom:'18px'}}>
+        <div>
+          <div style={{fontFamily:'var(--serif)',fontSize:isMobile?'26px':'36px',fontWeight:'700',marginBottom:'4px'}}>Settings</div>
+          <div style={{color:'var(--muted)',fontSize:'13px'}}>Shop configuration and site controls</div>
+        </div>
+        <button onClick={save} style={{padding:'10px 22px',background:saved?'#2a7a3a':'var(--dark)',color:'#fff',borderRadius:'7px',fontSize:'13px',fontWeight:'500',border:'none',cursor:'pointer',transition:'background 0.3s',alignSelf:isMobile?'flex-end':'auto'}}>
+          {saved?'✓ Saved':'Save All'}
+        </button>
+      </div>
+      <div style={{display:'flex',borderBottom:'1.5px solid var(--beige)',marginBottom:'18px',overflowX:'auto'}}>
+        {TABS.map(t=>(
+          <button key={t.id} onClick={()=>setStab(t.id)} style={{padding:'9px 16px',fontSize:'13px',fontWeight:stab===t.id?'600':'400',color:stab===t.id?'var(--dark)':'var(--muted)',background:'none',border:'none',borderBottom:stab===t.id?'2px solid var(--accent)':'2px solid transparent',marginBottom:'-1.5px',cursor:'pointer',whiteSpace:'nowrap',transition:'color 0.14s'}}>{t.label}</button>
+        ))}
+      </div>
+      {stab==='contact' && (
+        <div style={{background:'#fff',border:'1px solid var(--beige)',borderRadius:'13px',padding:'20px 22px'}}>
+          <div style={{fontFamily:'var(--serif)',fontSize:'19px',fontWeight:'600',marginBottom:'14px'}}>Contact Info</div>
+          {[['address','Address'],['phone','Phone'],['email','Email']].map(([k,l])=>(
+            <div key={k} style={{marginBottom:'11px'}}>
+              <div style={lbl}>{l}</div>
+              <input style={inp} value={contact[k]} onChange={e=>setContact(p=>({...p,[k]:e.target.value}))}/>
+            </div>
+          ))}
+        </div>
+      )}
+      {stab==='hours' && (
+        <div style={{background:'#fff',border:'1px solid var(--beige)',borderRadius:'13px',padding:'20px 22px'}}>
+          <div style={{fontFamily:'var(--serif)',fontSize:'19px',fontWeight:'600',marginBottom:'14px'}}>Shop Hours</div>
+          {hours.map((h,i)=>(
+            isMobile ? (
+              <div key={h.day} style={{marginBottom:'12px',paddingBottom:'12px',borderBottom:i<hours.length-1?'1px solid var(--beige)':'none'}}>
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'6px'}}>
+                  <div style={{fontSize:'13.5px',fontWeight:'500'}}>{h.day.slice(0,3)}</div>
+                  <button onClick={()=>setHours(prev=>prev.map((x,j)=>j===i?{...x,closed:!x.closed}:x))} style={{padding:'5px 12px',border:'1.5px solid var(--tan)',borderRadius:'6px',fontSize:'12px',color:h.closed?'var(--accent)':'var(--muted)',background:h.closed?'rgba(139,38,53,0.06)':'none',cursor:'pointer'}}>{h.closed?'Closed':'Open'}</button>
+                </div>
+                {!h.closed && (
+                  <div style={{display:'grid',gridTemplateColumns:'1fr 16px 1fr',gap:'6px',alignItems:'center'}}>
+                    <input style={{...inp,fontSize:'13px'}} value={h.open} onChange={e=>setHours(prev=>prev.map((x,j)=>j===i?{...x,open:e.target.value}:x))}/>
+                    <div style={{textAlign:'center',fontSize:'12px',color:'var(--muted)'}}>–</div>
+                    <input style={{...inp,fontSize:'13px'}} value={h.close} onChange={e=>setHours(prev=>prev.map((x,j)=>j===i?{...x,close:e.target.value}:x))}/>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div key={h.day} style={{display:'grid',gridTemplateColumns:'110px 1fr 16px 1fr 80px',gap:'8px',alignItems:'center',marginBottom:'10px'}}>
+                <div style={{fontSize:'13.5px',fontWeight:'500'}}>{h.day}</div>
+                <input style={{...inp,fontSize:'13px',opacity:h.closed?0.4:1}} disabled={h.closed} value={h.open} onChange={e=>setHours(prev=>prev.map((x,j)=>j===i?{...x,open:e.target.value}:x))}/>
+                <div style={{textAlign:'center',fontSize:'12px',color:'var(--muted)'}}>–</div>
+                <input style={{...inp,fontSize:'13px',opacity:h.closed?0.4:1}} disabled={h.closed} value={h.close} onChange={e=>setHours(prev=>prev.map((x,j)=>j===i?{...x,close:e.target.value}:x))}/>
+                <button onClick={()=>setHours(prev=>prev.map((x,j)=>j===i?{...x,closed:!x.closed}:x))} style={{padding:'7px 8px',border:'1.5px solid var(--tan)',borderRadius:'6px',fontSize:'11px',color:h.closed?'var(--accent)':'var(--muted)',background:h.closed?'rgba(139,38,53,0.06)':'none',cursor:'pointer',whiteSpace:'nowrap'}}>{h.closed?'Closed':'Open'}</button>
+              </div>
+            )
+          ))}
+        </div>
+      )}
+      {stab==='pricing' && (
+        <div style={{background:'#fff',border:'1px solid var(--beige)',borderRadius:'13px',padding:'20px 22px'}}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'4px'}}>
+            <div style={{fontFamily:'var(--serif)',fontSize:'19px',fontWeight:'600'}}>Service Pricing</div>
+            <button onClick={savePrices} style={{padding:'8px 18px',background:pricesSaved?'#2a7a3a':'var(--dark)',color:'#fff',borderRadius:'7px',fontSize:'12px',fontWeight:'500',border:'none',cursor:'pointer',transition:'background 0.3s'}}>{pricesSaved?'✓ Saved':'Save & Publish'}</button>
+          </div>
+          <div style={{fontSize:'12px',color:'var(--muted)',marginBottom:'20px'}}>Changes save to the site instantly — customers will see updated prices on their next page load.</div>
+          {['Haircuts','Beard','Packages'].map(tab=>(
+            <div key={tab} style={{marginBottom:'22px'}}>
+              <div style={{fontSize:'10px',fontWeight:'700',letterSpacing:'0.12em',textTransform:'uppercase',color:'var(--muted)',marginBottom:'10px',paddingBottom:'6px',borderBottom:'1px solid var(--beige)'}}>{tab}</div>
+              {svPrices.filter(p=>p.tab===tab).map(p=>(
+                <div key={p.key} style={{display:'grid',gridTemplateColumns:'1fr 120px',gap:'10px',alignItems:'center',marginBottom:'10px'}}>
+                  <div style={{fontSize:'14px',fontWeight:'500'}}>{p.label}</div>
+                  <div style={{display:'flex',alignItems:'center',gap:'0'}}>
+                    <span style={{padding:'8px 10px',background:'var(--cream)',border:'1.5px solid var(--beige)',borderRight:'none',borderRadius:'7px 0 0 7px',fontSize:'14px',color:'var(--muted)',fontWeight:'500'}}>$</span>
+                    <input
+                      type="number" min="0" step="1"
+                      value={p.price}
+                      onChange={e=>setSvPrices(prev=>prev.map(x=>x.key===p.key?{...x,price:e.target.value}:x))}
+                      style={{width:'100%',padding:'8px 10px',border:'1.5px solid var(--beige)',borderLeft:'none',borderRadius:'0 7px 7px 0',fontSize:'14px',color:'var(--dark)',background:'#fff',outline:'none',fontWeight:'500'}}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ))}
+          <div style={{padding:'11px 14px',background:'rgba(42,122,58,0.06)',border:'1px solid rgba(42,122,58,0.15)',borderRadius:'8px',fontSize:'12px',color:'#2a7a3a',lineHeight:'1.5'}}>
+            Prices are stored locally and sync to the public site. Connect a backend to persist across devices.
+          </div>
+        </div>
+      )}
+      {stab==='gallery' && (
+        <div style={{background:'#fff',border:'1px solid var(--beige)',borderRadius:'13px',padding:'20px 22px'}}>
+          <div style={{fontFamily:'var(--serif)',fontSize:'19px',fontWeight:'600',marginBottom:'4px'}}>Gallery Photos</div>
+          <div style={{fontSize:'12px',color:'var(--muted)',marginBottom:'16px'}}>6 photos shown on the public website. Click a slot to upload or replace.</div>
+          <div style={{display:'grid',gridTemplateColumns:isMobile?'repeat(2,1fr)':'repeat(3,1fr)',gap:'12px',marginBottom:'14px'}}>
+            {photos.map((photo,idx)=>(
+              <div key={idx} style={{position:'relative'}}>
+                <label style={{display:'flex',aspectRatio:'4/3',background:photo?'none':'var(--cream)',border:photo?'none':'1.5px dashed var(--tan)',borderRadius:'8px',overflow:'hidden',cursor:'pointer',alignItems:'center',justifyContent:'center'}}>
+                  {photo ? (
+                    <img src={photo.url} style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}/>
+                  ) : (
+                    <div style={{textAlign:'center',padding:'12px'}}>
+                      <div style={{fontSize:'24px',color:'var(--tan)',marginBottom:'4px',lineHeight:'1'}}>+</div>
+                      <div style={{fontSize:'10px',fontWeight:'600',color:'var(--muted)',letterSpacing:'0.08em',textTransform:'uppercase'}}>Photo {idx+1}</div>
+                    </div>
+                  )}
+                  <input type="file" accept="image/*" style={{display:'none'}} onChange={e=>handlePhotoUpload(idx,e.target.files[0])}/>
+                </label>
+                {photo && (
+                  <button onClick={()=>setPhotos(prev=>prev.map((p,i)=>i===idx?null:p))} style={{position:'absolute',top:'5px',right:'5px',width:'22px',height:'22px',borderRadius:'50%',background:'rgba(0,0,0,0.55)',color:'#fff',border:'none',cursor:'pointer',fontSize:'11px',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:'700'}}>✕</button>
+                )}
+              </div>
+            ))}
+          </div>
+          <div style={{padding:'11px 14px',background:'var(--cream)',borderRadius:'8px',fontSize:'12px',color:'var(--muted)',lineHeight:'1.5'}}>Recommended: 800×600px or larger, JPEG or PNG. Drag photos directly onto any slot.</div>
+        </div>
+      )}
+      {stab==='tweaks' && (
+        <div style={{background:'#fff',border:'1px solid var(--beige)',borderRadius:'13px',padding:'20px 22px'}}>
+          <div style={{fontFamily:'var(--serif)',fontSize:'19px',fontWeight:'600',marginBottom:'16px'}}>Site Tweaks</div>
+          <div style={{marginBottom:'20px'}}>
+            <div style={lbl}>Brand Colour</div>
+            <div style={{display:'flex',gap:'10px',flexWrap:'wrap',marginBottom:'6px'}}>
+              {ACCENT_SWATCHES.map((c,i)=>(
+                <button key={c} onClick={()=>setTweaks(p=>({...p,accent:c}))} title={SWATCH_NAMES[i]} style={{width:'40px',height:'40px',background:c,borderRadius:'8px',border:tweaks.accent===c?'3px solid var(--dark)':'3px solid transparent',cursor:'pointer',position:'relative',outline:'none',boxShadow:tweaks.accent===c?'0 0 0 1px var(--dark)':undefined}}>
+                  {tweaks.accent===c && <span style={{position:'absolute',top:'50%',left:'50%',transform:'translate(-50%,-50%)',color:'#fff',fontSize:'13px',fontWeight:'700',textShadow:'0 1px 2px rgba(0,0,0,0.5)'}}>✓</span>}
+                </button>
+              ))}
+            </div>
+            <div style={{fontSize:'11px',color:'var(--muted)'}}>{SWATCH_NAMES[ACCENT_SWATCHES.indexOf(tweaks.accent)]||'Custom colour'}</div>
+          </div>
+          {[['shopName','Shop Name'],['tagline','Tagline'],['heroText','Hero Heading']].map(([k,l])=>(
+            <div key={k} style={{marginBottom:'13px'}}>
+              <div style={lbl}>{l}</div>
+              <input style={inp} value={tweaks[k]} onChange={e=>setTweaks(p=>({...p,[k]:e.target.value}))}/>
+            </div>
+          ))}
+          <div style={{marginTop:'6px',padding:'12px 14px',background:'var(--cream)',borderRadius:'8px',fontSize:'12px',color:'var(--muted)',lineHeight:'1.6'}}>
+            <strong style={{color:'var(--dark)'}}>Backend required:</strong> These controls are UI prototypes only. Once the backend is connected, saving here will update <code style={{fontSize:'11px',background:'var(--beige)',padding:'1px 5px',borderRadius:'3px'}}>index.html</code> via the CMS API.
+          </div>
+        </div>
+      )}
+      {stab==='rules' && (
+        <div style={{background:'#fff',border:'1px solid var(--beige)',borderRadius:'13px',padding:'20px 22px'}}>
+          <div style={{fontFamily:'var(--serif)',fontSize:'19px',fontWeight:'600',marginBottom:'14px'}}>Business Rules</div>
+          {[['loyalty','Loyalty Program','Enable points earning and redemption'],['onlineBooking','Online Bookings','Allow customers to book via the website']].map(([k,label,desc],i,arr)=>(
+            <div key={k} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'11px 0',borderBottom:i<arr.length-1?'1px solid var(--beige)':'none',marginBottom:i===arr.length-1?'14px':'0'}}>
+              <div style={{paddingRight:'16px'}}>
+                <div style={{fontSize:'14px',fontWeight:'500',marginBottom:'2px'}}>{label}</div>
+                <div style={{fontSize:'12px',color:'var(--muted)'}}>{desc}</div>
+              </div>
+              <button onClick={()=>setPrefs(p=>({...p,[k]:!p[k]}))} style={{width:'44px',height:'24px',borderRadius:'12px',background:prefs[k]?'var(--accent)':'var(--tan)',position:'relative',cursor:'pointer',transition:'background 0.2s',border:'none',flexShrink:0}}>
+                <div style={{position:'absolute',top:'4px',left:prefs[k]?'22px':'4px',width:'16px',height:'16px',borderRadius:'50%',background:'#fff',transition:'left 0.2s'}}/>
+              </button>
+            </div>
+          ))}
+          <div style={{display:'grid',gridTemplateColumns:isMobile?'1fr 1fr':'1fr 1fr 1fr',gap:'10px'}}>
+            {[['window','Booking Window (days)'],['cancelHours','Cancel Window (hrs)'],['commission','Staff Commission (%)']].map(([k,l])=>(
+              <div key={k}>
+                <div style={lbl}>{l}</div>
+                <input style={inp} type="number" value={prefs[k]} onChange={e=>setPrefs(p=>({...p,[k]:e.target.value}))}/>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+// ── App ────────────────────────────────────────────────
+function App() {
+  const isMobile    = useIsMobile();
+  const [view,      setView]      = useState('overview');
+  const [authReady, setAuthReady] = useState(false);
+
+  useEffect(() => {
+    window.API.supabase().auth.getSession().then(async ({ data: { session } }) => {
+      if (!session) { window.location.href = 'index.html'; return; }
+      try {
+        const me = await window.API.getMe();
+        if (me.role !== 'owner') { window.location.href = 'staff.html'; return; }
+      } catch(e) { window.location.href = 'index.html'; return; }
+      setAuthReady(true);
+    });
+  }, []);
+
+  if (!authReady) return (
+    <div style={{height:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:'var(--cream)',flexDirection:'column',gap:'12px'}}>
+      <div style={{fontFamily:'var(--serif)',fontSize:'22px',color:'var(--dark)'}}>Harbour Barbers</div>
+      <div style={{fontSize:'13px',color:'var(--muted)'}}>Loading dashboard…</div>
+    </div>
+  );
+
+  const views = {overview:OverviewView,analytics:AnalyticsView,staff:StaffView,settings:SettingsView};
+  const View = views[view]||OverviewView;
+  return (
+    <div style={{display:'flex',flexDirection:'column',height:'100vh',overflow:'hidden'}}>
+      {isMobile && <MobileHeader/>}
+      <div style={{display:'flex',flex:1,overflow:'hidden'}}>
+        {!isMobile && <Sidebar view={view} setView={setView}/>}
+        <main style={{flex:1,overflowY:'auto',background:'var(--cream)',padding:isMobile?'20px 16px':'44px 52px'}}>
+          <View isMobile={isMobile}/>
+        </main>
+      </div>
+      {isMobile && <MobileNav items={NAV} view={view} setView={setView}/>}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

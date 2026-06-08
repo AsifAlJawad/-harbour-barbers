@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Harbour Barbers — My Account</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,400;1,600&display=swap" rel="stylesheet">
+<script src="/config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="/api.js"></script>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+  :root {
+    --cream:#f7f5f0; --beige:#eeebe4; --tan:#ccc7be;
+    --accent:#8b2635; --dark:#18181a; --muted:#6a6560;
+    --serif:'Cormorant Garamond',Georgia,serif;
+    --sans:'DM Sans',system-ui,sans-serif;
+  }
+  *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+  html,body,#root{height:100%;}
+  body{font-family:var(--sans);color:var(--dark);overflow:hidden;}
+  button{cursor:pointer;font-family:var(--sans);border:none;background:none;}
+  input,select,textarea{font-family:var(--sans);}
+  ::-webkit-scrollbar{width:5px;}
+  ::-webkit-scrollbar-track{background:transparent;}
+  ::-webkit-scrollbar-thumb{background:var(--tan);border-radius:3px;}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useCallback } = React;
+
+function useIsMobile() {
+  const [mob, setMob] = useState(window.innerWidth < 768);
+  useEffect(() => {
+    const h = () => setMob(window.innerWidth < 768);
+    window.addEventListener('resize', h);
+    return () => window.removeEventListener('resize', h);
+  }, []);
+  return mob;
+}
+
+// ── Helpers ─────────────────────────────────────────────
+function fmtAppt(a) {
+  const d = new Date(a.scheduled_at);
+  const DAYS   = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return {
+    id:         a.id,
+    service:    a.services?.name    || '—',
+    serviceId:  a.service_id,
+    barber:     a.barbers?.name     || '—',
+    barberId:   a.barber_id,
+    date:       `${DAYS[d.getDay()]} ${MONTHS[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`,
+    time:       d.toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit', hour12:true }),
+    price:      (a.services?.price || 0) / 100,
+    status:     a.status,
+    serviceObj: { id: a.service_id, name: a.services?.name, price: (a.services?.price||0)/100, duration: a.services?.duration + ' min' },
+    raw:        a,
+  };
+}
+
+function buildDates(count) {
+  const DAYS   = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const open   = [false,true,true,true,true,true,true];
+  const result = []; let d = new Date();
+  while (result.length < count) {
+    d = new Date(d.getTime() + 86400000);
+    if (open[d.getDay()]) {
+      const yyyy = d.getFullYear();
+      const mm   = String(d.getMonth()+1).padStart(2,'0');
+      const dd   = String(d.getDate()).padStart(2,'0');
+      result.push({ label: DAYS[d.getDay()], date: MONTHS[d.getMonth()]+' '+d.getDate(), isoDate: `${yyyy}-${mm}-${dd}` });
+    }
+  }
+  return result;
+}
+
+function timeToISO(isoDate, timeStr) {
+  const [time, mer] = timeStr.split(' ');
+  let [h, m] = time.split(':').map(Number);
+  if (mer === 'PM' && h !== 12) h += 12;
+  if (mer === 'AM' && h === 12) h = 0;
+  return `${isoDate}T${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:00`;
+}
+
+const DATES = buildDates(7);
+const TIMES = ['9:00 AM','9:30 AM','10:00 AM','10:30 AM','11:00 AM','11:30 AM',
+               '12:00 PM','2:00 PM','2:30 PM','3:00 PM','3:30 PM','4:00 PM','4:30 PM','5:00 PM'];
+
+// ── Icon ──────────────────────────────────────────────
+function Ico({d, size=16}) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d={d}/>
+    </svg>
+  );
+}
+
+const NAV = [
+  {id:'book',    label:'Book',     short:'Book',    d:'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z'},
+  {id:'appts',   label:'Bookings', short:'Bookings',d:'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 000 4h6a2 2 0 000-4M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4'},
+  {id:'loyalty', label:'Rewards',  short:'Rewards', d:'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z'},
+  {id:'profile', label:'Profile',  short:'Profile', d:'M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 11a4 4 0 100-8 4 4 0 000 8z'},
+];
+
+// ── Mobile Shell ───────────────────────────────────────
+function MobileHeader({profile}) {
+  const initial = (profile?.full_name || '?')[0].toUpperCase();
+  const tier    = profile?.loyalty_tier || '…';
+  const pts     = profile?.loyalty_points ?? '…';
+  return (
+    <div style={{background:'var(--dark)',padding:'13px 20px',display:'flex',alignItems:'center',justifyContent:'space-between',borderBottom:'1px solid rgba(255,255,255,0.07)',flexShrink:0}}>
+      <div style={{fontFamily:'var(--serif)',fontSize:'17px',fontWeight:'700',color:'#f7f5f0',letterSpacing:'0.04em',textTransform:'uppercase'}}>
+        Harbour <span style={{color:'var(--accent)'}}>Barbers</span>
+      </div>
+      <div style={{textAlign:'right'}}>
+        <div style={{color:'rgba(255,255,255,0.8)',fontSize:'12px',fontWeight:'500'}}>{profile?.full_name || '…'}</div>
+        <div style={{color:'rgba(255,255,255,0.4)',fontSize:'11px',textTransform:'capitalize'}}>{tier} · {pts} pts</div>
+      </div>
+    </div>
+  );
+}
+
+function MobileNav({view, setView}) {
+  return (
+    <nav style={{background:'var(--dark)',borderTop:'1px solid rgba(255,255,255,0.1)',display:'flex',flexShrink:0,paddingBottom:'env(safe-area-inset-bottom,0px)'}}>
+      {NAV.map(item => {
+        const active = view === item.id;
+        return (
+          <button key={item.id} onClick={()=>setView(item.id)} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:'3px',padding:'10px 2px 12px',color:active?'#fff':'rgba(255,255,255,0.4)',transition:'color 0.15s',position:'relative'}}>
+            {active && <div style={{position:'absolute',top:0,left:'50%',transform:'translateX(-50%)',width:'20px',height:'2px',background:'var(--accent)',borderRadius:'0 0 2px 2px'}}/>}
+            <Ico d={item.d} size={18}/>
+            <span style={{fontSize:'9.5px',fontWeight:active?'600':'400'}}>{item.short}</span>
+          </button>
+        );
+      })}
+    </nav>
+  );
+}
+
+// ── Desktop Sidebar ────────────────────────────────────
+function Sidebar({view, setView, profile, onSignOut}) {
+  const initial = (profile?.full_name || '?')[0].toUpperCase();
+  const tier    = profile?.loyalty_tier || '…';
+  const pts     = profile?.loyalty_points ?? '…';
+  return (
+    <div style={{width:'248px',minWidth:'248px',height:'100%',background:'var(--dark)',display:'flex',flexDirection:'column'}}>
+      <div style={{padding:'28px 28px 22px',borderBottom:'1px solid rgba(255,255,255,0.07)'}}>
+        <div style={{fontFamily:'var(--serif)',fontSize:'19px',fontWeight:'700',color:'#f7f5f0',letterSpacing:'0.04em',textTransform:'uppercase'}}>
+          Harbour <span style={{color:'var(--accent)'}}>Barbers</span>
+        </div>
+        <div style={{fontSize:'11px',color:'rgba(255,255,255,0.3)',letterSpacing:'0.14em',textTransform:'uppercase',marginTop:'3px'}}>Member Portal</div>
+      </div>
+      <div style={{padding:'20px 28px 18px',borderBottom:'1px solid rgba(255,255,255,0.07)'}}>
+        <div style={{width:'40px',height:'40px',borderRadius:'50%',background:'var(--accent)',color:'#fff',fontFamily:'var(--serif)',fontWeight:'700',fontSize:'18px',display:'flex',alignItems:'center',justifyContent:'center',marginBottom:'10px'}}>{initial}</div>
+        <div style={{color:'#f7f5f0',fontWeight:'500',fontSize:'14px'}}>{profile?.full_name || '…'}</div>
+        <div style={{color:'rgba(255,255,255,0.38)',fontSize:'12px',marginTop:'2px',textTransform:'capitalize'}}>{tier} Member · {pts} pts</div>
+      </div>
+      <nav style={{flex:1,padding:'14px 0',overflowY:'auto'}}>
+        {NAV.map(item => {
+          const active = view === item.id;
+          return (
+            <button key={item.id} onClick={()=>setView(item.id)} style={{display:'flex',alignItems:'center',gap:'11px',padding:'11px 28px',color:active?'#f7f5f0':'rgba(255,255,255,0.42)',background:active?'rgba(255,255,255,0.06)':'none',fontSize:'13.5px',fontWeight:active?'500':'400',width:'100%',textAlign:'left',borderLeft:active?'2px solid var(--accent)':'2px solid transparent',transition:'all 0.14s'}}>
+              <Ico d={item.d}/> {item.label}
+            </button>
+          );
+        })}
+      </nav>
+      <div style={{padding:'18px 28px',borderTop:'1px solid rgba(255,255,255,0.07)',display:'flex',flexDirection:'column',gap:'10px'}}>
+        <a href="index.html" style={{color:'rgba(255,255,255,0.3)',fontSize:'13px',textDecoration:'none',display:'flex',alignItems:'center',gap:'6px'}}>
+          <Ico d="M19 12H5M12 19l-7-7 7-7" size={14}/> Back to site
+        </a>
+        <button onClick={onSignOut} style={{color:'rgba(255,255,255,0.25)',fontSize:'12px',background:'none',border:'none',cursor:'pointer',textAlign:'left',padding:0,display:'flex',alignItems:'center',gap:'6px',fontFamily:'var(--sans)'}}>
+          <Ico d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" size={13}/> Sign Out
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── Step bar ───────────────────────────────────────────
+function StepBar({step}) {
+  const labels = ['Service','Schedule','Confirm'];
+  return (
+    <div style={{display:'flex',alignItems:'center',marginBottom:'24px',maxWidth:'320px'}}>
+      {labels.map((label,i) => (
+        <React.Fragment key={i}>
+          <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:'4px'}}>
+            <div style={{width:'26px',height:'26px',borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'11px',fontWeight:'600',background:step>i+1?'var(--accent)':step===i+1?'var(--dark)':'var(--beige)',color:step>=i+1?'#fff':'var(--muted)',transition:'all 0.2s',flexShrink:0}}>
+              {step>i+1?'✓':i+1}
+            </div>
+            <div style={{fontSize:'10px',color:step===i+1?'var(--dark)':'var(--muted)',fontWeight:step===i+1?'600':'400',whiteSpace:'nowrap'}}>{label}</div>
+          </div>
+          {i<labels.length-1 && <div style={{flex:1,height:'2px',background:step>i+1?'var(--accent)':'var(--beige)',margin:'0 6px',marginBottom:'14px'}}/>}
+        </React.Fragment>
+      ))}
+    </div>
+  );
+}
+
+// ── Book view ──────────────────────────────────────────
+function BookView({onBookAgain, isMobile, services, barbers, onAppointmentBooked}) {
+  const [step,       setStep]       = useState(onBookAgain ? 2 : 1);
+  const [sel,        setSel]        = useState({service: onBookAgain||null, barber:null, date:null, time:null, notes:''});
+  const [confirmed,  setConfirmed]  = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error,      setError]      = useState('');
+
+  useEffect(() => {
+    if (onBookAgain) { setStep(2); setSel(p=>({...p, service:onBookAgain})); }
+  }, [onBookAgain]);
+
+  const set = (k,v) => setSel(p=>({...p,[k]:v}));
+
+  const handleConfirm = async () => {
+    if (submitting) return;
+    setSubmitting(true);
+    setError('');
+    try {
+      const scheduled_at = timeToISO(sel.date.isoDate, sel.time);
+      await window.API.bookAppointment({
+        barber_id:    sel.barber.id === '0' ? barbers.find(b=>b.id!=='0')?.id : sel.barber.id,
+        service_id:   sel.service.id,
+        scheduled_at,
+        notes:        sel.notes || undefined,
+      });
+      setConfirmed(true);
+      if (onAppointmentBooked) onAppointmentBooked();
+    } catch(e) {
+      setError(e.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (confirmed) return (
+    <div style={{textAlign:'center',padding:'48px 0'}}>
+      <div style={{width:'60px',height:'60px',borderRadius:'50%',background:'var(--accent)',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 18px',fontSize:'24px',color:'#fff'}}>✓</div>
+      <div style={{fontFamily:'var(--serif)',fontSize:isMobile?'28px':'34px',fontWeight:'700',marginBottom:'8px'}}>Booking Confirmed</div>
+      <div style={{color:'var(--muted)',fontSize:'14px',marginBottom:'28px'}}>We look forward to seeing you. A confirmation email is on its way.</div>
+      <div style={{background:'#fff',border:'1px solid var(--beige)',borderRadius:'14px',padding:'22px',maxWidth:'360px',margin:'0 auto 24px',textAlign:'left'}}>
+        {[['Service',sel.service?.name],['Barber',sel.barber?.name],['Date',sel.date?.label+', '+sel.date?.date],['Time',sel.time],['Total','$'+sel.service?.price]].map(([l,v],i,arr) => (
+          <div key={l} style={{display:'flex',justifyContent:'space-between',padding:'9px 0',borderBottom:i<arr.length-1?'1px solid var(--beige)':'none',fontSize:'14px'}}>
+            <span style={{color:'var(--muted)'}}>{l}</span>
+            <span style={{fontWeight:'500',color:l==='Total'?'var(--accent)':'var(--dark)'}}>{v}</span>
+          </div>
+        ))}
+      </div>
+      <button style={{padding:'12px 28px',background:'var(--dark)',color:'#fff',borderRadius:'7px',fontSize:'14px',fontWeight:'500',border:'none',cursor:'pointer'}} onClick={()=>{setConfirmed(false);setStep(1);setSel({service:null,barber:null,date:null,time:null,notes:''});}}>Book Another</button>
+    </div>
+  );
+
+  return (
+    <div>
+      <div style={{fontFamily:'var(--serif)',fontSize:isMobile?'26px':'34px',fontWeight:'700',marginBottom:'4px'}}>Book Appointment</div>
+      <div style={{color:'var(--muted)',fontSize:'13px',marginBottom:'22px'}}>Schedule your next visit in 3 quick steps</div>
+      <StepBar step={step}/>
+
+      {step===1 && (
+        <>
+          {services.length === 0
+            ? <div style={{color:'var(--muted)',fontSize:'14px'}}>Loading services…</div>
+            : <div style={{display:'grid',gridTemplateColumns:isMobile?'1fr':'1fr 1fr',gap:'10px',marginBottom:'20px'}}>
+                {services.map(svc => {
+                  const active = sel.service?.id === svc.id;
+                  return (
+                    <button key={svc.id} onClick={()=>set('service',svc)} style={{background:active?'var(--dark)':'#fff',border:`1.5px solid ${active?'var(--dark)':'var(--beige)'}`,borderRadius:'10px',padding:'16px',cursor:'pointer',textAlign:'left',transition:'all 0.15s'}}>
+                      <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:'4px'}}>
+                        <div style={{fontFamily:'var(--serif)',fontSize:'17px',fontWeight:'600',color:active?'#fff':'var(--dark)'}}>{svc.name}</div>
+                        <div style={{fontFamily:'var(--serif)',fontSize:'20px',fontWeight:'700',color:active?'rgba(255,255,255,0.9)':'var(--accent)',flexShrink:0,marginLeft:'8px'}}>${svc.price}</div>
+                      </div>
+                      <div style={{fontSize:'12px',color:active?'rgba(255,255,255,0.5)':'var(--muted)',marginBottom:'4px'}}>{svc.duration}</div>
+                      <div style={{fontSize:'12px',color:active?'rgba(255,255,255,0.4)':'var(--muted)',fontStyle:'italic',lineHeight:'1.4'}}>{svc.desc}</div>
+                    </button>
+                  );
+                })}
+              </div>
+          }
+          <div style={{display:'flex',justifyContent:'flex-end'}}>
+            <button onClick={()=>sel.service&&setStep(2)} style={{padding:'12px 28px',background:'var(--dark)',color:'#fff',borderRadius:'7px',fontSize:'14px',fontWeight:'500',border:'none',cursor:sel.service?'pointer':'default',opacity:sel.service?1:0.4,width:isMobile?'100%':'auto'}}>Next →</button>
+          </div>
+        </>
+      )}
+
+      {step===2 && (
+        <>
+          <div style={{marginBottom:'20px'}}>
+            <div style={{fontSize:'10px',fontWeight:'600',color:'var(--muted)',letterSpacing:'0.12em',textTransform:'uppercase',marginBottom:'10px'}}>Choose Barber</div>
+            <div style={{display:'flex',gap:'8px',flexWrap:'wrap'}}>
+              {barbers.map(b => {
+                const active = sel.barber?.id === b.id;
+                return (
+                  <button key={b.id} onClick={()=>set('barber',b)} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:'5px',padding:'11px 14px',border:`1.5px solid ${active?'var(--accent)':'var(--beige)'}`,borderRadius:'10px',cursor:'pointer',background:active?'rgba(139,38,53,0.06)':'#fff',minWidth:isMobile?'70px':'80px',transition:'all 0.14s',flex:isMobile?'1':'none'}}>
+                    <div style={{width:'36px',height:'36px',borderRadius:'50%',background:active?'var(--accent)':'var(--beige)',color:active?'#fff':'var(--muted)',fontFamily:'var(--serif)',fontWeight:'700',fontSize:'16px',display:'flex',alignItems:'center',justifyContent:'center'}}>{b.initial}</div>
+                    <div style={{fontSize:'12px',fontWeight:'500',color:active?'var(--accent)':'var(--dark)'}}>{b.name}</div>
+                    {!isMobile && <div style={{fontSize:'10px',color:'var(--muted)'}}>{b.role}</div>}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <div style={{marginBottom:'20px'}}>
+            <div style={{fontSize:'10px',fontWeight:'600',color:'var(--muted)',letterSpacing:'0.12em',textTransform:'uppercase',marginBottom:'10px'}}>Choose Date</div>
+            <div style={{display:'flex',gap:'8px',overflowX:'auto',paddingBottom:'4px'}}>
+              {DATES.map(d => {
+                const active = sel.date?.isoDate === d.isoDate;
+                return (
+                  <button key={d.isoDate} onClick={()=>set('date',d)} style={{display:'flex',flexDirection:'column',alignItems:'center',padding:'10px 12px',border:`1.5px solid ${active?'var(--accent)':'var(--beige)'}`,borderRadius:'9px',cursor:'pointer',background:active?'rgba(139,38,53,0.06)':'#fff',minWidth:'58px',flexShrink:0,transition:'all 0.14s'}}>
+                    <div style={{fontSize:'10px',color:active?'var(--accent)':'var(--muted)',fontWeight:'600',letterSpacing:'0.06em'}}>{d.label}</div>
+                    <div style={{fontSize:'15px',fontWeight:'600',color:active?'var(--accent)':'var(--dark)',marginTop:'2px'}}>{d.date.split(' ')[1]}</div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <div style={{marginBottom:'22px'}}>
+            <div style={{fontSize:'10px',fontWeight:'600',color:'var(--muted)',letterSpacing:'0.12em',textTransform:'uppercase',marginBottom:'10px'}}>Choose Time</div>
+            <div style={{display:'grid',gridTemplateColumns:isMobile?'repeat(3,1fr)':'repeat(4,1fr)',gap:'8px'}}>
+              {TIMES.map(t => {
+                const active = sel.time === t;
+                return (
+                  <button key={t} onClick={()=>set('time',t)} style={{padding:'9px',border:`1.5px solid ${active?'var(--accent)':'var(--beige)'}`,borderRadius:'7px',fontSize:'13px',cursor:'pointer',color:active?'var(--accent)':'var(--dark)',background:active?'rgba(139,38,53,0.06)':'#fff',fontWeight:active?'600':'400',transition:'all 0.12s'}}>{t}</button>
+                );
+              })}
+            </div>
+          </div>
+          <div style={{display:'flex',justifyContent:'flex-end',gap:'8px',flexDirection:isMobile?'column-reverse':'row'}}>
+            <button onClick={()=>setStep(1)} style={{padding:'11px 22px',border:'1.5px solid var(--tan)',borderRadius:'7px',fontSize:'14px',color:'var(--muted)',background:'none',cursor:'pointer'}}>← Back</button>
+            <button onClick={()=>(sel.barber&&sel.date&&sel.time)&&setStep(3)} style={{padding:'11px 26px',background:'var(--dark)',color:'#fff',borderRadius:'7px',fontSize:'14px',fontWeight:'500',border:'none',cursor:(sel.barber&&sel.date&&sel.time)?'pointer':'default',opacity:(sel.barber&&sel.date&&sel.time)?1:0.4}}>Next →</button>
+          </div>
+        </>
+      )}
+
+      {step===3 && (
+        <>
+          <div style={{background:'#fff',border:'1px solid var(--beige)',borderRadius:'13px',padding:'22px',marginBottom:'16px'}}>
+            {[['Service',sel.service?.name],['Barber',sel.barber?.name],['Date',sel.date?.label+', '+sel.date?.date],['Time',sel.time],['Duration',sel.service?.duration]].map(([l,v],i,arr) => (
+              <div key={l} style={{display:'flex',justifyContent:'space-between',padding:'10px 0',borderBottom:i<arr.length-1?'1px solid var(--beige)':'none',fontSize:'14px'}}>
+                <span style={{color:'var(--muted)'}}>{l}</span><span style={{fontWeight:'500'}}>{v}</span>
+              </div>
+            ))}
+            <div style={{display:'flex',justifyContent:'space-between',paddingTop:'12px',fontFamily:'var(--serif)',fontSize:'19px',fontWeight:'700'}}>
+              <span>Total</span><span style={{color:'var(--accent)'}}>${sel.service?.price}</span>
+            </div>
+          </div>
+          <div style={{marginBottom:'14px'}}>
+            <div style={{fontSize:'10px',fontWeight:'600',color:'var(--muted)',letterSpacing:'0.1em',textTransform:'uppercase',marginBottom:'7px'}}>Notes (optional)</div>
+            <textarea style={{width:'100%',padding:'12px',border:'1.5px solid var(--beige)',borderRadius:'8px',fontSize:'14px',color:'var(--dark)',background:'#fff',resize:'none',outline:'none',lineHeight:'1.5'}} rows="3" placeholder="Any requests or preferences…" value={sel.notes} onChange={e=>set('notes',e.target.value)}/>
+          </div>
+          {error && <div style={{fontSize:'13px',color:'var(--accent)',marginBottom:'12px',padding:'10px 14px',background:'rgba(139,38,53,0.06)',borderRadius:'6px'}}>{error}</div>}
+          <div style={{fontSize:'12px',color:'var(--muted)',marginBottom:'18px',lineHeight:'1.5'}}>By confirming you agree to our 24-hour cancellation policy.</div>
+          <div style={{display:'flex',justifyContent:'flex-end',gap:'8px',flexDirection:isMobile?'column-reverse':'row'}}>
+            <button onClick={()=>setStep(2)} style={{padding:'11px 22px',border:'1.5px solid var(--tan)',borderRadius:'7px',fontSize:'14px',color:'var(--muted)',background:'none',cursor:'pointer'}}>← Back</button>
+            <button onClick={handleConfirm} disabled={submitting} style={{padding:'11px 26px',background:'var(--accent)',color:'#fff',borderRadius:'7px',fontSize:'14px',fontWeight:'500',border:'none',cursor:submitting?'default':'pointer',opacity:submitting?0.6:1}}>
+              {submitting ? 'Confirming…' : 'Confirm Booking'}
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// ── Appointments view ──────────────────────────────────
+function AppointmentsView({onRebook, isMobile, appointments, onCancelled}) {
+  const [tab, setTab] = useState('upcoming');
+  const [cancelling, setCancelling] = useState(null);
+
+  const upcoming = appointments.filter(a => ['pending','confirmed'].includes(a.status));
+  const past     = appointments.filter(a => ['completed','cancelled','no_show'].includes(a.status));
+
+  const handleCancel = async (id) => {
+    setCancelling(id);
+    try {
+      await window.API.cancelAppointment(id);
+      if (onCancelled) onCancelled();
+    } catch(e) {
+      alert(e.message);
+    } finally {
+      setCancelling(null);
+    }
+  };
+
+  return (
+    <div style={{maxWidth:isMobile?'none':'620px'}}>
+      <div style={{fontFamily:'var(--serif)',fontSize:isMobile?'26px':'34px',fontWeight:'700',marginBottom:'4px'}}>My Appointments</div>
+      <div style={{color:'var(--muted)',fontSize:'13px',marginBottom:'20px'}}>View and manage your bookings</div>
+      <div style={{display:'flex',borderBottom:'2px solid var(--beige)',marginBottom:'20px'}}>
+        {[['upcoming','Upcoming ('+upcoming.length+')'],['past','History ('+past.length+')']].map(([id,label]) => (
+          <button key={id} onClick={()=>setTab(id)} style={{padding:'9px 18px',fontSize:'14px',fontWeight:tab===id?'600':'400',color:tab===id?'var(--dark)':'var(--muted)',borderBottom:tab===id?'2px solid var(--dark)':'2px solid transparent',marginBottom:'-2px',cursor:'pointer',background:'none',border:'none',borderBottom:tab===id?'2px solid var(--dark)':'2px solid transparent'}}>{label}</button>
+        ))}
+      </div>
+      {tab==='upcoming' && (upcoming.length ? upcoming.map(a => (
+        <div key={a.id} style={{background:'#fff',border:'1px solid var(--beige)',borderRadius:'13px',padding:'18px 20px',marginBottom:'12px'}}>
+          <div style={{display:'inline-block',fontSize:'11px',padding:'3px 10px',borderRadius:'100px',background:'#e8f4ea',color:'#2a7a3a',fontWeight:'600',letterSpacing:'0.04em',marginBottom:'8px',textTransform:'capitalize'}}>{a.status}</div>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:isMobile?'flex-start':'center',flexDirection:isMobile?'column':'row',gap:isMobile?'12px':'0'}}>
+            <div>
+              <div style={{fontFamily:'var(--serif)',fontSize:'21px',fontWeight:'600',marginBottom:'4px'}}>{a.service}</div>
+              <div style={{fontSize:'13px',color:'var(--muted)',lineHeight:'1.6'}}>with {a.barber} · {a.date} · {a.time}</div>
+            </div>
+            <div style={{display:'flex',alignItems:'center',justifyContent:isMobile?'space-between':'flex-end',gap:'10px',width:isMobile?'100%':'auto'}}>
+              <div style={{fontFamily:'var(--serif)',fontSize:'24px',fontWeight:'700',color:'var(--accent)'}}>${a.price}</div>
+              <div style={{display:'flex',gap:'8px'}}>
+                <button onClick={()=>onRebook(a.serviceObj)} style={{padding:'8px 14px',fontSize:'12.5px',border:'1.5px solid var(--tan)',borderRadius:'6px',background:'none',color:'var(--muted)',cursor:'pointer'}}>Reschedule</button>
+                <button onClick={()=>handleCancel(a.id)} disabled={cancelling===a.id} style={{padding:'8px 14px',fontSize:'12.5px',border:'1.5px solid #e0aaaa',borderRadius:'6px',background:'none',color:'var(--accent)',cursor:'pointer',opacity:cancelling===a.id?0.5:1}}>
+                  {cancelling===a.id ? '…' : 'Cancel'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )) : (
+        <div style={{textAlign:'center',padding:'52px 20px'}}>
+          <div style={{width:'56px',height:'56px',borderRadius:'50%',background:'var(--beige)',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 16px'}}>
+            <svg width='22' height='22' viewBox='0 0 24 24' fill='none' stroke='var(--tan)' strokeWidth='1.8' strokeLinecap='round' strokeLinejoin='round'><rect x='3' y='4' width='18' height='18' rx='2'/><line x1='16' y1='2' x2='16' y2='6'/><line x1='8' y1='2' x2='8' y2='6'/><line x1='3' y1='10' x2='21' y2='10'/></svg>
+          </div>
+          <div style={{fontFamily:'var(--serif)',fontSize:'22px',fontWeight:'600',color:'var(--dark)',marginBottom:'6px'}}>Your chair is waiting</div>
+          <div style={{fontSize:'13px',color:'var(--muted)',marginBottom:'20px',lineHeight:'1.7'}}>No upcoming appointments.<br/>Ready for your next cut?</div>
+          <button onClick={()=>onRebook(null)} style={{padding:'10px 26px',background:'var(--accent)',color:'#fff',borderRadius:'7px',fontSize:'13.5px',fontWeight:'500',border:'none',cursor:'pointer'}}>Book Now</button>
+        </div>
+      ))}
+      {tab==='past' && (past.length ? past.map(a => (
+        <div key={a.id} style={{background:'#fff',border:'1px solid var(--beige)',borderRadius:'13px',padding:'18px 20px',marginBottom:'12px'}}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:isMobile?'flex-start':'center',flexDirection:isMobile?'column':'row',gap:isMobile?'12px':'0'}}>
+            <div>
+              <div style={{fontFamily:'var(--serif)',fontSize:'21px',fontWeight:'600',marginBottom:'4px'}}>{a.service}</div>
+              <div style={{fontSize:'13px',color:'var(--muted)',lineHeight:'1.6'}}>with {a.barber} · {a.date} · {a.time}</div>
+            </div>
+            {a.status === 'completed' && (
+              <div style={{display:'flex',alignItems:'center',justifyContent:isMobile?'space-between':'flex-end',gap:'12px',width:isMobile?'100%':'auto'}}>
+                <div style={{fontFamily:'var(--serif)',fontSize:'24px',fontWeight:'700',color:'var(--accent)'}}>${a.price}</div>
+                <button onClick={()=>onRebook(a.serviceObj)} style={{padding:'8px 16px',fontSize:'12.5px',border:'none',borderRadius:'6px',background:'var(--dark)',color:'#fff',cursor:'pointer'}}>Book Again</button>
+              </div>
+            )}
+          </div>
+        </div>
+      )) : (
+        <div style={{textAlign:'center',padding:'40px',color:'var(--muted)',fontSize:'14px'}}>No past appointments yet.</div>
+      ))}
+    </div>
+  );
+}
+
+// ── Loyalty view ───────────────────────────────────────
+function LoyaltyView({isMobile, loyalty}) {
+  if (!loyalty) return <div style={{color:'var(--muted)',fontSize:'14px'}}>Loading rewards…</div>;
+
+  const { points, tier, next_tier, points_to_next, tiers, transactions } = loyalty;
+  const nextTotal = tiers.find(t=>t.name===next_tier)?.min || points;
+  const pct = next_tier ? Math.round(points / nextTotal * 100) : 100;
+
+  return (
+    <div style={{maxWidth:isMobile?'none':'540px'}}>
+      <div style={{fontFamily:'var(--serif)',fontSize:isMobile?'26px':'34px',fontWeight:'700',marginBottom:'4px'}}>Loyalty Rewards</div>
+      <div style={{color:'var(--muted)',fontSize:'13px',marginBottom:'22px'}}>Earn 1 point for every dollar spent</div>
+      <div style={{background:'var(--dark)',borderRadius:'16px',padding:isMobile?'24px':'32px',marginBottom:'14px',position:'relative',overflow:'hidden'}}>
+        <div style={{position:'absolute',top:'-30px',right:'-30px',width:'180px',height:'180px',borderRadius:'50%',background:'rgba(139,38,53,0.15)',pointerEvents:'none'}}/>
+        <div style={{display:'inline-block',background:'var(--accent)',color:'#fff',fontSize:'11px',fontWeight:'600',padding:'4px 13px',borderRadius:'100px',letterSpacing:'0.09em',marginBottom:'12px',textTransform:'uppercase'}}>{tier} Member</div>
+        <div style={{fontFamily:'var(--serif)',fontSize:isMobile?'56px':'68px',fontWeight:'700',color:'#fff',lineHeight:'1'}}>{points}</div>
+        <div style={{color:'rgba(255,255,255,0.45)',fontSize:'14px',margin:'4px 0 18px'}}>points balance</div>
+        <div style={{height:'6px',background:'rgba(255,255,255,0.1)',borderRadius:'3px',overflow:'hidden'}}>
+          <div style={{height:'100%',background:'var(--accent)',borderRadius:'3px',width:Math.min(pct,100)+'%'}}/>
+        </div>
+        {next_tier
+          ? <div style={{fontSize:'12px',color:'rgba(255,255,255,0.35)',marginTop:'7px'}}>{points_to_next} pts to {next_tier} · {pct}% there</div>
+          : <div style={{fontSize:'12px',color:'rgba(255,255,255,0.35)',marginTop:'7px'}}>Maximum tier reached</div>
+        }
+      </div>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:'8px',marginBottom:'14px'}}>
+        {(tiers||[]).map(t => (
+          <div key={t.name} style={{background:t.active?'var(--accent)':'#fff',border:`1px solid ${t.active?'var(--accent)':'var(--beige)'}`,borderRadius:'10px',padding:'10px',textAlign:'center'}}>
+            <div style={{fontSize:'12px',fontWeight:'600',color:t.active?'#fff':'var(--dark)',marginBottom:'2px',textTransform:'capitalize'}}>{t.name}</div>
+            <div style={{fontSize:'10px',color:t.active?'rgba(255,255,255,0.65)':'var(--muted)'}}>{t.min}–{t.max===Infinity?'∞':t.max}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{background:'#fff',border:'1px solid var(--beige)',borderRadius:'13px',padding:'20px 22px',marginBottom:'14px'}}>
+        <div style={{fontFamily:'var(--serif)',fontSize:'19px',fontWeight:'600',marginBottom:'14px'}}>Points History</div>
+        {transactions.length === 0
+          ? <div style={{fontSize:'13px',color:'var(--muted)'}}>No transactions yet.</div>
+          : transactions.map((t,i) => {
+              const d = new Date(t.created_at);
+              const label = `${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()]} ${d.getDate()}`;
+              return (
+                <div key={t.id} style={{display:'flex',alignItems:'center',padding:'10px 0',borderBottom:i<transactions.length-1?'1px solid var(--beige)':'none',fontSize:'14px'}}>
+                  <div style={{color:'var(--muted)',fontSize:'11px',width:'46px',flexShrink:0}}>{label}</div>
+                  <div style={{flex:1,paddingLeft:'10px',fontSize:'13px'}}>{t.description}</div>
+                  <div style={{fontFamily:'var(--serif)',fontWeight:'700',fontSize:'16px',color:t.points>0?'#2a7a3a':'var(--accent)'}}>{t.points>0?'+':''}{t.points}</div>
+                </div>
+              );
+            })
+        }
+      </div>
+      <div style={{background:'#fff',border:'1px solid var(--beige)',borderRadius:'13px',padding:'20px 22px'}}>
+        <div style={{fontFamily:'var(--serif)',fontSize:'19px',fontWeight:'600',marginBottom:'12px'}}>How to Earn</div>
+        {[['Visit','Earn 1 pt per dollar spent on any service'],['Refer a Friend','+50 pts when they complete their first visit'],['Birthday Month','+25 pts automatically added every birthday']].map(([title,desc]) => (
+          <div key={title} style={{display:'flex',gap:'10px',marginBottom:'11px'}}>
+            <div style={{width:'6px',height:'6px',borderRadius:'50%',background:'var(--accent)',flexShrink:0,marginTop:'7px'}}/>
+            <div style={{fontSize:'13px',lineHeight:'1.5'}}><strong>{title}</strong> — {desc}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Profile view ───────────────────────────────────────
+function ProfileView({isMobile, profile, barbers, onProfileUpdated}) {
+  const [editing,  setEditing]  = useState(false);
+  const [saving,   setSaving]   = useState(false);
+  const [form,     setForm]     = useState(null);
+
+  useEffect(() => {
+    if (profile) setForm({
+      name:         profile.full_name   || '',
+      phone:        profile.phone       || '',
+      email:        profile.email       || '',
+      barber:       profile.preferred_barber_id || '',
+      sms:          profile.notify_sms  ?? false,
+      email_n:      profile.notify_email ?? true,
+    });
+  }, [profile]);
+
+  const upd = (k,v) => setForm(p=>({...p,[k]:v}));
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await window.API.updateProfile({
+        full_name:           form.name,
+        phone:               form.phone || undefined,
+        preferred_barber_id: form.barber || undefined,
+        notify_email:        form.email_n,
+        notify_sms:          form.sms,
+      });
+      setEditing(false);
+      if (onProfileUpdated) onProfileUpdated();
+    } catch(e) {
+      alert(e.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const inp = {width:'100%',padding:'9px 12px',border:'1.5px solid var(--beige)',borderRadius:'7px',fontSize:'14px',color:'var(--dark)',background:'var(--cream)',outline:'none'};
+  if (!form) return <div style={{color:'var(--muted)',fontSize:'14px'}}>Loading profile…</div>;
+
+  return (
+    <div style={{maxWidth:isMobile?'none':'500px'}}>
+      <div style={{fontFamily:'var(--serif)',fontSize:isMobile?'26px':'34px',fontWeight:'700',marginBottom:'4px'}}>My Profile</div>
+      <div style={{color:'var(--muted)',fontSize:'13px',marginBottom:'22px'}}>Manage your account details</div>
+      <div style={{background:'#fff',border:'1px solid var(--beige)',borderRadius:'13px',padding:'22px',marginBottom:'12px'}}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'16px'}}>
+          <div style={{fontFamily:'var(--serif)',fontSize:'19px',fontWeight:'600'}}>Personal Details</div>
+          <button onClick={()=>setEditing(!editing)} style={{fontSize:'13px',color:'var(--accent)',background:'none',border:'none',cursor:'pointer',fontWeight:'500'}}>{editing?'Cancel':'Edit'}</button>
+        </div>
+        <div style={{width:'48px',height:'48px',borderRadius:'50%',background:'var(--accent)',color:'#fff',fontFamily:'var(--serif)',fontWeight:'700',fontSize:'20px',display:'flex',alignItems:'center',justifyContent:'center',marginBottom:'16px'}}>{(form.name||'?')[0].toUpperCase()}</div>
+        {editing ? (
+          <>
+            <div style={{display:'grid',gridTemplateColumns:isMobile?'1fr':'1fr 1fr',gap:'12px',marginBottom:'12px'}}>
+              {[['name','Full Name'],['phone','Phone']].map(([k,l]) => (
+                <div key={k}>
+                  <div style={{fontSize:'10px',fontWeight:'600',color:'var(--muted)',letterSpacing:'0.1em',textTransform:'uppercase',marginBottom:'4px'}}>{l}</div>
+                  <input style={inp} value={form[k]} onChange={e=>upd(k,e.target.value)}/>
+                </div>
+              ))}
+            </div>
+            <div style={{marginBottom:'12px'}}>
+              <div style={{fontSize:'10px',fontWeight:'600',color:'var(--muted)',letterSpacing:'0.1em',textTransform:'uppercase',marginBottom:'4px'}}>Email</div>
+              <input style={{...inp,background:'var(--beige)',cursor:'not-allowed'}} value={form.email} disabled title="Email cannot be changed here"/>
+            </div>
+            <div style={{marginBottom:'16px'}}>
+              <div style={{fontSize:'10px',fontWeight:'600',color:'var(--muted)',letterSpacing:'0.1em',textTransform:'uppercase',marginBottom:'4px'}}>Preferred Barber</div>
+              <select style={inp} value={form.barber} onChange={e=>upd('barber',e.target.value)}>
+                <option value="">No preference</option>
+                {barbers.filter(b=>b.id!=='0').map(b=><option key={b.id} value={b.id}>{b.name}</option>)}
+              </select>
+            </div>
+            <button onClick={handleSave} disabled={saving} style={{padding:'10px 22px',background:'var(--dark)',color:'#fff',borderRadius:'7px',fontSize:'14px',fontWeight:'500',border:'none',cursor:saving?'default':'pointer',opacity:saving?0.6:1,width:isMobile?'100%':'auto'}}>
+              {saving ? 'Saving…' : 'Save Changes'}
+            </button>
+          </>
+        ) : (
+          <div style={{display:'grid',gridTemplateColumns:isMobile?'1fr':'1fr 1fr',gap:'14px'}}>
+            {[['Name',form.name],['Phone',form.phone||'—'],['Email',form.email],['Preferred Barber',barbers.find(b=>b.id===form.barber)?.name||'No preference']].map(([l,v]) => (
+              <div key={l}>
+                <div style={{fontSize:'10px',fontWeight:'600',color:'var(--muted)',letterSpacing:'0.1em',textTransform:'uppercase',marginBottom:'3px'}}>{l}</div>
+                <div style={{fontSize:'14px',color:'var(--dark)'}}>{v}</div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+      <div style={{background:'#fff',border:'1px solid var(--beige)',borderRadius:'13px',padding:'22px'}}>
+        <div style={{fontFamily:'var(--serif)',fontSize:'19px',fontWeight:'600',marginBottom:'14px'}}>Notifications</div>
+        {[['sms','SMS Reminders','Appointment confirmations and 24h reminders'],['email_n','Email Updates','Newsletters, promotions, and loyalty updates']].map(([k,label,desc],i,arr) => (
+          <div key={k} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'11px 0',borderBottom:i<arr.length-1?'1px solid var(--beige)':'none'}}>
+            <div style={{paddingRight:'16px'}}>
+              <div style={{fontSize:'14px',fontWeight:'500',marginBottom:'2px'}}>{label}</div>
+              <div style={{fontSize:'12px',color:'var(--muted)'}}>{desc}</div>
+            </div>
+            <button onClick={()=>upd(k,!form[k])} style={{width:'40px',height:'22px',borderRadius:'11px',background:form[k]?'var(--accent)':'var(--tan)',position:'relative',cursor:'pointer',transition:'background 0.2s',border:'none',flexShrink:0}}>
+              <div style={{position:'absolute',top:'3px',left:form[k]?'19px':'3px',width:'16px',height:'16px',borderRadius:'50%',background:'#fff',transition:'left 0.2s'}}/>
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── App ────────────────────────────────────────────────
+function App() {
+  const isMobile = useIsMobile();
+  const [view,          setView]          = useState('book');
+  const [rebookService, setRebookService] = useState(null);
+  const [loading,       setLoading]       = useState(true);
+  const [profile,       setProfile]       = useState(null);
+  const [services,      setServices]      = useState([]);
+  const [barbers,       setBarbers]       = useState([]);
+  const [appointments,  setAppointments]  = useState([]);
+  const [loyalty,       setLoyalty]       = useState(null);
+
+  const loadData = useCallback(async () => {
+    try {
+      const [prof, svcs, barbs, appts, loy] = await Promise.all([
+        window.API.getMe(),
+        window.API.getServices(),
+        window.API.getBarbers(),
+        window.API.getAppointments(),
+        window.API.getLoyalty(),
+      ]);
+
+      setProfile(prof);
+      setServices(svcs.map(s => ({
+        id:       s.id,
+        name:     s.name,
+        price:    (s.price / 100).toFixed(0) * 1,
+        duration: s.duration + ' min',
+        desc:     s.description || '',
+      })));
+      setBarbers([
+        { id:'0', name:'Any', role:'First available', initial:'?' },
+        ...barbs.filter(b=>b.available).map(b => ({ id:b.id, name:b.name, role:b.role, initial:b.name[0] }))
+      ]);
+      setAppointments(appts.map(fmtAppt));
+      setLoyalty(loy);
+    } catch(e) {
+      console.error('Load error:', e);
+    }
+  }, []);
+
+  useEffect(() => {
+    window.API.supabase().auth.getSession().then(({ data: { session } }) => {
+      if (!session) { window.location.href = 'index.html'; return; }
+      loadData().finally(() => setLoading(false));
+    });
+  }, [loadData]);
+
+  const handleSignOut = async () => {
+    await window.API.signOut();
+    window.location.href = 'index.html';
+  };
+
+  const handleRebook = svc => { setRebookService(svc); setView('book'); };
+  const handleSetView = v  => { setRebookService(null); setView(v); };
+
+  if (loading) return (
+    <div style={{height:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:'var(--cream)',flexDirection:'column',gap:'12px'}}>
+      <div style={{fontFamily:'var(--serif)',fontSize:'22px',color:'var(--dark)'}}>Harbour Barbers</div>
+      <div style={{fontSize:'13px',color:'var(--muted)'}}>Loading your account…</div>
+    </div>
+  );
+
+  const views = {
+    book:    () => <BookView    onBookAgain={rebookService} isMobile={isMobile} services={services} barbers={barbers} onAppointmentBooked={loadData}/>,
+    appts:   () => <AppointmentsView onRebook={handleRebook} isMobile={isMobile} appointments={appointments} onCancelled={loadData}/>,
+    loyalty: () => <LoyaltyView isMobile={isMobile} loyalty={loyalty}/>,
+    profile: () => <ProfileView isMobile={isMobile} profile={profile} barbers={barbers} onProfileUpdated={loadData}/>,
+  };
+  const View = views[view] || views.book;
+
+  return (
+    <div style={{display:'flex',flexDirection:'column',height:'100vh',overflow:'hidden'}}>
+      {isMobile && <MobileHeader profile={profile}/>}
+      <div style={{display:'flex',flex:1,overflow:'hidden'}}>
+        {!isMobile && <Sidebar view={view} setView={handleSetView} profile={profile} onSignOut={handleSignOut}/>}
+        <main style={{flex:1,overflowY:'auto',background:'var(--cream)',padding:isMobile?'20px 16px':'48px 52px'}}>
+          <View/>
+        </main>
+      </div>
+      {isMobile && <MobileNav view={view} setView={handleSetView}/>}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
