@@ -1,8 +1,12 @@
 import postgres from 'postgres'
 import 'dotenv/config'
 
-// Use individual params to avoid URL-encoding issues with special chars in password.
-// Pooler (IPv4-compatible) for Vercel; falls back to URL string if POSTGRES_URL set by Vercel integration.
+// Extract password from DATABASE_URL if DB_PASSWORD not set separately
+let password = process.env.DB_PASSWORD
+if (!password && process.env.DATABASE_URL) {
+  try { password = new URL(process.env.DATABASE_URL).password } catch {}
+}
+
 const db = process.env.POSTGRES_URL
   ? postgres(process.env.POSTGRES_URL, { ssl: 'require', max: 1, prepare: false })
   : postgres({
@@ -10,7 +14,7 @@ const db = process.env.POSTGRES_URL
       port:     5432,
       database: 'postgres',
       username: 'postgres.jzbrxjzvrmvderqkmcei',
-      password: process.env.DB_PASSWORD,
+      password,
       ssl:      'require',
       max:      1,
       prepare:  false,

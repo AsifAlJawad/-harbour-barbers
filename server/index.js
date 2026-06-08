@@ -48,6 +48,7 @@ app.get('/backend/debug', async (req, res) => {
     DATABASE_URL:          process.env.DATABASE_URL          ? 'SET' : 'missing',
     POSTGRES_URL:          process.env.POSTGRES_URL          ? 'SET' : 'missing',
     DATABASE_HOST:         dbHost,
+    DB_PASSWORD:           process.env.DB_PASSWORD           ? 'set' : 'MISSING',
     SUPABASE_URL:          process.env.SUPABASE_URL          ? 'set' : 'missing',
     SERVICE_KEY:           (process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY) ? 'set' : 'MISSING',
     SUPABASE_ANON_KEY:     process.env.SUPABASE_ANON_KEY     ? 'set' : 'missing',
