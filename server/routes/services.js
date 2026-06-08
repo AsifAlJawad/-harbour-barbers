@@ -8,7 +8,10 @@ router.get('/', async (req, res) => {
   try {
     const rows = await db`SELECT * FROM services WHERE active = true ORDER BY category, price`
     res.json(rows)
-  } catch (e) { res.status(500).json({ error: e.message }) }
+  } catch (e) {
+    console.error('DB_ERROR services:', e.message, e.code, process.env.DATABASE_URL ? 'DATABASE_URL set' : 'DATABASE_URL missing')
+    res.status(500).json({ error: e.message })
+  }
 })
 
 router.post('/', requireStaff, async (req, res) => {
