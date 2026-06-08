@@ -4,26 +4,6 @@ import { requireAuth } from '../middleware/auth.js'
 
 const router = Router()
 
-router.post('/profile', requireAuth, async (req, res) => {
-  const { full_name, phone } = req.body
-  if (!full_name) return res.status(400).json({ error: 'full_name required' })
-  try {
-    const { data: row, error } = await supabase
-      .from('profiles')
-      .upsert({
-        id: req.user.id,
-        full_name,
-        phone: phone ?? null,
-      }, {
-        onConflict: 'id',
-        ignoreDuplicates: false,
-      })
-      .select()
-      .single()
-    if (error) throw error
-    res.status(201).json(row)
-  } catch (e) { res.status(400).json({ error: e.message }) }
-})
 
 router.get('/me', requireAuth, async (req, res) => {
   try {

@@ -14,10 +14,7 @@ router.get('/', async (req, res) => {
       .order('price')
     if (error) throw error
     res.json(rows)
-  } catch (e) {
-    console.error('DB_ERROR services:', e.message, process.env.SUPABASE_URL ? 'SUPABASE_URL set' : 'SUPABASE_URL missing')
-    res.status(500).json({ error: e.message })
-  }
+  } catch (e) { res.status(500).json({ error: e.message }) }
 })
 
 router.post('/', requireStaff, async (req, res) => {
