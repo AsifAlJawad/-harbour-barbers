@@ -1,7 +1,9 @@
 import postgres from 'postgres'
 import 'dotenv/config'
 
-const connectionString = process.env.DATABASE_URL || process.env.POSTGRES_URL
+// POSTGRES_URL is auto-set by Vercel-Supabase integration with correct pooler format
+// DATABASE_URL is a manual override
+const connectionString = process.env.POSTGRES_URL || process.env.DATABASE_URL
 
 const db = connectionString
   ? postgres(connectionString, { ssl: 'require', max: 1, prepare: false })
