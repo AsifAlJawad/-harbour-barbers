@@ -32,10 +32,9 @@ app.get('/config.js', (req, res) => {
 
 // Diagnostic route
 app.get('/backend/debug', async (req, res) => {
+  const connStr = process.env.DATABASE_URL || process.env.POSTGRES_URL
   let dbHost = 'MISSING'
-  if (process.env.DATABASE_URL) {
-    try { dbHost = new URL(process.env.DATABASE_URL).hostname } catch {}
-  }
+  if (connStr) { try { dbHost = new URL(connStr).hostname } catch {} }
   let dbTest = 'not tested'
   try {
     const { default: db } = await import('./lib/db.js')
@@ -45,11 +44,13 @@ app.get('/backend/debug', async (req, res) => {
     dbTest = e.message
   }
   res.json({
-    DATABASE_URL: process.env.DATABASE_URL ? 'SET' : 'MISSING',
-    DATABASE_HOST: dbHost,
-    DB_HOST: process.env.DB_HOST || 'MISSING',
-    SUPABASE_URL: process.env.SUPABASE_URL ? 'set' : 'missing',
-    DB_TEST: dbTest,
+    DATABASE_URL:          process.env.DATABASE_URL          ? 'SET' : 'missing',
+    POSTGRES_URL:          process.env.POSTGRES_URL          ? 'SET' : 'missing',
+    DATABASE_HOST:         dbHost,
+    SUPABASE_URL:          process.env.SUPABASE_URL          ? 'set' : 'missing',
+    SERVICE_KEY:           (process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY) ? 'set' : 'MISSING',
+    SUPABASE_ANON_KEY:     process.env.SUPABASE_ANON_KEY     ? 'set' : 'missing',
+    DB_TEST:               dbTest,
   })
 })
 

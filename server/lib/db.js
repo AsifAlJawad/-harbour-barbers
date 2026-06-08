@@ -1,14 +1,16 @@
 import postgres from 'postgres'
 import 'dotenv/config'
 
-const db = process.env.DATABASE_URL
-  ? postgres(process.env.DATABASE_URL, { ssl: 'require', max: 1, prepare: false })
+const connectionString = process.env.DATABASE_URL || process.env.POSTGRES_URL
+
+const db = connectionString
+  ? postgres(connectionString, { ssl: 'require', max: 1, prepare: false })
   : postgres({
-      host:     process.env.DB_HOST,
+      host:     process.env.DB_HOST     || process.env.POSTGRES_HOST,
       port:     5432,
-      database: 'postgres',
-      username: 'postgres',
-      password: process.env.DB_PASSWORD,
+      database: process.env.POSTGRES_DATABASE || 'postgres',
+      username: process.env.POSTGRES_USER     || 'postgres',
+      password: process.env.DB_PASSWORD       || process.env.POSTGRES_PASSWORD,
       ssl:      'require',
       max:      10,
     })

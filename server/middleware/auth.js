@@ -5,7 +5,7 @@ import 'dotenv/config'
 // Used only for JWT verification (auth endpoint, not data API)
 const auth = createClient(
   process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_KEY,
+  process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY,
   { auth: { autoRefreshToken: false, persistSession: false } }
 )
 
