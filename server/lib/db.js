@@ -1,20 +1,19 @@
 import postgres from 'postgres'
 import 'dotenv/config'
 
-// POSTGRES_URL is auto-set by Vercel-Supabase integration with correct pooler format
-// DATABASE_URL is a manual override
-const connectionString = process.env.POSTGRES_URL || process.env.DATABASE_URL
-
-const db = connectionString
-  ? postgres(connectionString, { ssl: 'require', max: 1, prepare: false })
+// Use individual params to avoid URL-encoding issues with special chars in password.
+// Pooler (IPv4-compatible) for Vercel; falls back to URL string if POSTGRES_URL set by Vercel integration.
+const db = process.env.POSTGRES_URL
+  ? postgres(process.env.POSTGRES_URL, { ssl: 'require', max: 1, prepare: false })
   : postgres({
-      host:     process.env.DB_HOST     || process.env.POSTGRES_HOST,
+      host:     'aws-0-ca-central-1.pooler.supabase.com',
       port:     5432,
-      database: process.env.POSTGRES_DATABASE || 'postgres',
-      username: process.env.POSTGRES_USER     || 'postgres',
-      password: process.env.DB_PASSWORD       || process.env.POSTGRES_PASSWORD,
+      database: 'postgres',
+      username: 'postgres.jzbrxjzvrmvderqkmcei',
+      password: process.env.DB_PASSWORD,
       ssl:      'require',
-      max:      10,
+      max:      1,
+      prepare:  false,
     })
 
 export default db
