@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
-import db from '../lib/db.js'
+import { supabase } from '../lib/supabase.js'
 import 'dotenv/config'
 
 // Used only for JWT verification (auth endpoint, not data API)
@@ -29,8 +29,8 @@ export async function requireStaff(req, res, next) {
   const user = await verifyToken(req, res)
   if (!user) return
 
-  const [profile] = await db`SELECT role FROM profiles WHERE id = ${user.id}`
-  if (!profile || !['staff','owner'].includes(profile.role)) {
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle()
+  if (!profile || !['staff', 'owner'].includes(profile.role)) {
     return res.status(403).json({ error: 'Forbidden' })
   }
   req.user = user
@@ -41,7 +41,7 @@ export async function requireOwner(req, res, next) {
   const user = await verifyToken(req, res)
   if (!user) return
 
-  const [profile] = await db`SELECT role FROM profiles WHERE id = ${user.id}`
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle()
   if (!profile || profile.role !== 'owner') {
     return res.status(403).json({ error: 'Forbidden' })
   }

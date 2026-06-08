@@ -1,11 +1,15 @@
 import { Router } from 'express'
-import db from '../lib/db.js'
+import { supabase } from '../lib/supabase.js'
 
 const router = Router()
 
 router.get('/', async (req, res) => {
   try {
-    const rows = await db`SELECT * FROM barbers ORDER BY name`
+    const { data: rows, error } = await supabase
+      .from('barbers')
+      .select('*')
+      .order('name')
+    if (error) throw error
     res.json(rows)
   } catch (e) { res.status(500).json({ error: e.message }) }
 })
@@ -17,14 +21,14 @@ router.get('/:id/availability', async (req, res) => {
   }
 
   try {
-    const booked = await db`
-      SELECT a.scheduled_at, s.duration
-      FROM appointments a
-      JOIN services s ON s.id = a.service_id
-      WHERE a.barber_id = ${req.params.id}
-        AND a.scheduled_at >= ${date + 'T09:00:00-07:00'}
-        AND a.scheduled_at <  ${date + 'T18:00:00-07:00'}
-        AND a.status IN ('pending','confirmed')`
+    const { data: booked, error } = await supabase
+      .from('appointments')
+      .select('scheduled_at, services(duration)')
+      .eq('barber_id', req.params.id)
+      .gte('scheduled_at', date + 'T09:00:00-07:00')
+      .lt('scheduled_at', date + 'T18:00:00-07:00')
+      .in('status', ['pending', 'confirmed'])
+    if (error) throw error
 
     const dayStart = new Date(`${date}T09:00:00-07:00`)
     const dayEnd   = new Date(`${date}T18:00:00-07:00`)
@@ -35,7 +39,8 @@ router.get('/:id/availability', async (req, res) => {
       const slotStart = new Date(cursor)
       const taken = booked.some(b => {
         const bStart = new Date(b.scheduled_at)
-        const bEnd   = new Date(bStart.getTime() + (b.duration || 30) * 60_000)
+        const duration = b.services?.duration || 30
+        const bEnd   = new Date(bStart.getTime() + duration * 60_000)
         return slotStart >= bStart && slotStart < bEnd
       })
       slots.push({ time: cursor.toISOString(), available: !taken })

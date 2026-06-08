@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import db from '../lib/db.js'
+import { supabase } from '../lib/supabase.js'
 import { requireStaff } from '../middleware/auth.js'
 
 const router = Router()
@@ -7,54 +7,79 @@ const router = Router()
 router.get('/schedule', requireStaff, async (req, res) => {
   const date = req.query.date || new Date().toISOString().slice(0, 10)
   try {
-    const rows = await db`
-      SELECT a.*,
-        row_to_json(s) AS services,
-        row_to_json(b) AS barbers,
-        row_to_json(p) AS profiles
-      FROM appointments a
-      JOIN services  s ON s.id = a.service_id
-      JOIN barbers   b ON b.id = a.barber_id
-      JOIN profiles  p ON p.id = a.customer_id
-      WHERE a.scheduled_at >= ${date + 'T00:00:00'}
-        AND a.scheduled_at <= ${date + 'T23:59:59'}
-        AND a.status != 'cancelled'
-      ORDER BY a.scheduled_at`
+    const { data: rows, error } = await supabase
+      .from('appointments')
+      .select('*, services(*), barbers(*), profiles(*)')
+      .gte('scheduled_at', date + 'T00:00:00')
+      .lte('scheduled_at', date + 'T23:59:59')
+      .neq('status', 'cancelled')
+      .order('scheduled_at')
+    if (error) throw error
     res.json(rows)
   } catch (e) { res.status(500).json({ error: e.message }) }
 })
 
 router.put('/appointments/:id/status', requireStaff, async (req, res) => {
   const { status } = req.body
-  const valid = ['confirmed','completed','no_show','cancelled']
+  const valid = ['confirmed', 'completed', 'no_show', 'cancelled']
   if (!valid.includes(status)) return res.status(400).json({ error: `status must be one of: ${valid.join(', ')}` })
 
   try {
-    const [appt] = await db`
-      UPDATE appointments SET status = ${status}
-      WHERE id = ${req.params.id}
-      RETURNING *`
+    const { data: appt, error: updateError } = await supabase
+      .from('appointments')
+      .update({ status })
+      .eq('id', req.params.id)
+      .select()
+      .single()
+    if (updateError) throw updateError
 
     if (status === 'completed' && appt) {
-      const [svc] = await db`SELECT price, name FROM services WHERE id = ${appt.service_id}`
-      const pts   = Math.floor((svc?.price || 0) / 100)
+      const { data: svc, error: svcError } = await supabase
+        .from('services')
+        .select('price, name')
+        .eq('id', appt.service_id)
+        .single()
+      if (svcError) throw svcError
+
+      const pts = Math.floor((svc?.price || 0) / 100)
       if (pts > 0) {
-        const [existing] = await db`
-          SELECT id FROM loyalty_transactions
-          WHERE appointment_id = ${req.params.id} AND description LIKE 'Completed%'`
+        const { data: existing, error: existingError } = await supabase
+          .from('loyalty_transactions')
+          .select('id')
+          .eq('appointment_id', req.params.id)
+          .like('description', 'Completed%')
+          .maybeSingle()
+        if (existingError) throw existingError
+
         if (!existing) {
-          await db`
-            INSERT INTO loyalty_transactions (customer_id, appointment_id, points, description)
-            VALUES (${appt.customer_id}, ${req.params.id}, ${pts}, ${'Completed ' + svc.name})`
-          await db`
-            UPDATE profiles SET
-              loyalty_points = loyalty_points + ${pts},
-              loyalty_tier = CASE
-                WHEN loyalty_points + ${pts} >= 1000 THEN 'platinum'
-                WHEN loyalty_points + ${pts} >= 500  THEN 'gold'
-                WHEN loyalty_points + ${pts} >= 200  THEN 'silver'
-                ELSE 'bronze' END
-            WHERE id = ${appt.customer_id}`
+          const { error: ltError } = await supabase
+            .from('loyalty_transactions')
+            .insert({
+              customer_id:    appt.customer_id,
+              appointment_id: req.params.id,
+              points:         pts,
+              description:    'Completed ' + svc.name,
+            })
+          if (ltError) throw ltError
+
+          const { data: profile, error: profileFetchError } = await supabase
+            .from('profiles')
+            .select('loyalty_points')
+            .eq('id', appt.customer_id)
+            .single()
+          if (profileFetchError) throw profileFetchError
+
+          const newPoints = (profile.loyalty_points || 0) + pts
+          const newTier =
+            newPoints >= 1000 ? 'platinum' :
+            newPoints >= 500  ? 'gold'     :
+            newPoints >= 200  ? 'silver'   : 'bronze'
+
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .update({ loyalty_points: newPoints, loyalty_tier: newTier })
+            .eq('id', appt.customer_id)
+          if (profileError) throw profileError
         }
       }
     }
@@ -70,23 +95,52 @@ router.post('/walk-in', requireStaff, async (req, res) => {
   }
   try {
     let customerId
+
     if (phone) {
-      const [existing] = await db`SELECT id FROM profiles WHERE phone = ${phone}`
+      const { data: existing } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('phone', phone)
+        .maybeSingle()
       customerId = existing?.id
     }
+
     if (!customerId) {
-      const [p] = await db`
-        INSERT INTO profiles (id, full_name, phone)
-        VALUES (gen_random_uuid(), ${customer_name}, ${phone ?? null})
-        RETURNING id`
-      customerId = p.id
+      // profiles.id references auth.users, so we cannot insert with a random UUID.
+      // Walk-in customers must be registered. Return an informative error.
+      return res.status(400).json({
+        error: 'Customer not found. Walk-in customers must be registered in the system first.',
+      })
     }
-    const [appt] = await db`
-      INSERT INTO appointments (customer_id, barber_id, service_id, scheduled_at, status, notes)
-      VALUES (${customerId}, ${barber_id}, ${service_id}, now(), 'confirmed', 'Walk-in')
-      RETURNING *`
-    const [svc] = await db`SELECT * FROM services WHERE id = ${service_id}`
-    const [bkr] = await db`SELECT * FROM barbers  WHERE id = ${barber_id}`
+
+    const { data: appt, error: apptError } = await supabase
+      .from('appointments')
+      .insert({
+        customer_id: customerId,
+        barber_id,
+        service_id,
+        scheduled_at: new Date().toISOString(),
+        status: 'confirmed',
+        notes: 'Walk-in',
+      })
+      .select()
+      .single()
+    if (apptError) throw apptError
+
+    const { data: svc, error: svcError } = await supabase
+      .from('services')
+      .select('*')
+      .eq('id', service_id)
+      .single()
+    if (svcError) throw svcError
+
+    const { data: bkr, error: bkrError } = await supabase
+      .from('barbers')
+      .select('*')
+      .eq('id', barber_id)
+      .single()
+    if (bkrError) throw bkrError
+
     res.status(201).json({ ...appt, services: svc, barbers: bkr })
   } catch (e) { res.status(400).json({ error: e.message }) }
 })
@@ -94,9 +148,19 @@ router.post('/walk-in', requireStaff, async (req, res) => {
 router.get('/customers', requireStaff, async (req, res) => {
   const q = req.query.q
   try {
-    const rows = q
-      ? await db`SELECT id,full_name,phone,loyalty_points,loyalty_tier,created_at FROM profiles WHERE role='customer' AND full_name ILIKE ${'%'+q+'%'} ORDER BY full_name LIMIT 100`
-      : await db`SELECT id,full_name,phone,loyalty_points,loyalty_tier,created_at FROM profiles WHERE role='customer' ORDER BY full_name LIMIT 100`
+    let query = supabase
+      .from('profiles')
+      .select('id, full_name, phone, loyalty_points, loyalty_tier, created_at')
+      .eq('role', 'customer')
+      .order('full_name')
+      .limit(100)
+
+    if (q) {
+      query = query.ilike('full_name', `%${q}%`)
+    }
+
+    const { data: rows, error } = await query
+    if (error) throw error
     res.json(rows)
   } catch (e) { res.status(500).json({ error: e.message }) }
 })
@@ -105,8 +169,13 @@ router.put('/barbers/:id/availability', requireStaff, async (req, res) => {
   const { available } = req.body
   if (typeof available !== 'boolean') return res.status(400).json({ error: 'available must be boolean' })
   try {
-    const [row] = await db`
-      UPDATE barbers SET available = ${available} WHERE id = ${req.params.id} RETURNING *`
+    const { data: row, error } = await supabase
+      .from('barbers')
+      .update({ available })
+      .eq('id', req.params.id)
+      .select()
+      .single()
+    if (error) throw error
     res.json(row)
   } catch (e) { res.status(400).json({ error: e.message }) }
 })

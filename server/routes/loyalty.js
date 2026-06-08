@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import db from '../lib/db.js'
+import { supabase } from '../lib/supabase.js'
 import { requireAuth } from '../middleware/auth.js'
 
 const router = Router()
@@ -13,25 +13,32 @@ const TIERS = [
 
 router.get('/', requireAuth, async (req, res) => {
   try {
-    const [profile] = await db`
-      SELECT loyalty_points, loyalty_tier FROM profiles WHERE id = ${req.user.id}`
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('loyalty_points, loyalty_tier')
+      .eq('id', req.user.id)
+      .maybeSingle()
+    if (profileError) throw profileError
     if (!profile) return res.status(404).json({ error: 'Profile not found' })
 
-    const transactions = await db`
-      SELECT * FROM loyalty_transactions
-      WHERE customer_id = ${req.user.id}
-      ORDER BY created_at DESC LIMIT 25`
+    const { data: transactions, error: txError } = await supabase
+      .from('loyalty_transactions')
+      .select('*')
+      .eq('customer_id', req.user.id)
+      .order('created_at', { ascending: false })
+      .limit(25)
+    if (txError) throw txError
 
     const pts         = profile.loyalty_points
     const currentTier = TIERS.find(t => pts >= t.min && pts <= t.max) || TIERS[0]
     const nextTier    = TIERS[TIERS.indexOf(currentTier) + 1] || null
 
     res.json({
-      points:        pts,
-      tier:          currentTier.name,
-      next_tier:     nextTier?.name || null,
+      points:         pts,
+      tier:           currentTier.name,
+      next_tier:      nextTier?.name || null,
       points_to_next: nextTier ? nextTier.min - pts : 0,
-      tiers:         TIERS.map(t => ({ ...t, active: t.name === currentTier.name })),
+      tiers:          TIERS.map(t => ({ ...t, active: t.name === currentTier.name })),
       transactions,
     })
   } catch (e) { res.status(500).json({ error: e.message }) }
