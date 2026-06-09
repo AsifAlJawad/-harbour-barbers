@@ -13,6 +13,24 @@ router.get('/me', requireAuth, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }) }
 })
 
+router.post('/profile', requireAuth, async (req, res) => {
+  const { full_name, phone } = req.body
+  try {
+    const { data: row, error } = await supabase
+      .from('profiles')
+      .upsert({
+        id:        req.user.id,
+        full_name: full_name || '',
+        phone:     phone     || null,
+        role:      'customer',
+      }, { onConflict: 'id' })
+      .select()
+      .single()
+    if (error) throw error
+    res.status(201).json(row)
+  } catch (e) { res.status(400).json({ error: e.message }) }
+})
+
 router.put('/profile', requireAuth, async (req, res) => {
   const { full_name, phone, preferred_barber_id, notify_email, notify_sms } = req.body
   try {
