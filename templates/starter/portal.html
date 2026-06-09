@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Starter — Portal</title>
+<script src="/config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="/api.js"></script>
+</head>
+<body>
+
+<header>
+  <h1>Harbour Barbers — My Account</h1>
+  <p id="user-info">Loading...</p>
+  <button onclick="API.signOut().then(() => location.href='index.html')">Sign Out</button>
+</header>
+
+<main>
+  <section>
+    <h2>Services</h2>
+    <ul id="services-list"><li>Loading...</li></ul>
+  </section>
+
+  <section>
+    <h2>My Appointments</h2>
+    <ul id="appointments-list"><li>Loading...</li></ul>
+  </section>
+
+  <section>
+    <h2>Loyalty</h2>
+    <p id="loyalty-info">Loading...</p>
+  </section>
+</main>
+
+<script>
+async function load() {
+  // Redirect to sign-in if not logged in
+  let me
+  try { me = await API.getMe() } catch (_) { location.href = 'index.html'; return }
+
+  document.getElementById('user-info').textContent =
+    `${me.full_name || me.email} — ${me.loyalty_tier} (${me.loyalty_points} pts)`
+
+  // Services
+  const services = await API.getServices()
+  document.getElementById('services-list').innerHTML = services
+    .map(s => `<li>${s.name} — $${(s.price / 100).toFixed(2)} (${s.duration_minutes} min)</li>`)
+    .join('')
+
+  // Appointments
+  const appts = await API.getAppointments()
+  document.getElementById('appointments-list').innerHTML = appts.length
+    ? appts.map(a => `<li>${a.services?.name} with ${a.barbers?.name} — ${new Date(a.scheduled_at).toLocaleString()} [${a.status}]</li>`).join('')
+    : '<li>No appointments yet.</li>'
+
+  // Loyalty
+  const loyalty = await API.getLoyalty()
+  document.getElementById('loyalty-info').textContent =
+    `${loyalty.points} points — ${loyalty.tier} tier`
+}
+
+load()
+</script>
+</body>
+</html>

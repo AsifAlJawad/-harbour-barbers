@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Starter — Sign In</title>
+<script src="/config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="/api.js"></script>
+</head>
+<body>
+<h1>Harbour Barbers</h1>
+
+<section id="signin-form">
+  <h2>Sign In</h2>
+  <input id="email"    type="email"    placeholder="Email" /><br>
+  <input id="password" type="password" placeholder="Password" /><br>
+  <button onclick="signIn()">Sign In</button>
+  <p><a href="#" onclick="showSignup()">No account? Sign Up</a></p>
+  <p id="error" style="color:red"></p>
+</section>
+
+<section id="signup-form" style="display:none">
+  <h2>Sign Up</h2>
+  <input id="su-name"     type="text"     placeholder="Full name" /><br>
+  <input id="su-email"    type="email"    placeholder="Email" /><br>
+  <input id="su-password" type="password" placeholder="Password" /><br>
+  <button onclick="signUp()">Create Account</button>
+  <p><a href="#" onclick="showSignin()">Already have an account?</a></p>
+  <p id="su-error" style="color:red"></p>
+</section>
+
+<script>
+function showSignup() { document.getElementById('signin-form').style.display='none'; document.getElementById('signup-form').style.display=''; }
+function showSignin()  { document.getElementById('signup-form').style.display='none'; document.getElementById('signin-form').style.display=''; }
+
+async function signIn() {
+  document.getElementById('error').textContent = ''
+  try {
+    await API.signIn(document.getElementById('email').value, document.getElementById('password').value)
+    const me = await API.getMe()
+    if (me.role === 'staff' || me.role === 'owner') location.href = '/staff.html'
+    else location.href = 'portal.html'
+  } catch (e) {
+    document.getElementById('error').textContent = e.message
+  }
+}
+
+async function signUp() {
+  document.getElementById('su-error').textContent = ''
+  try {
+    await API.signUp(
+      document.getElementById('su-email').value,
+      document.getElementById('su-password').value,
+      document.getElementById('su-name').value
+    )
+    location.href = 'portal.html'
+  } catch (e) {
+    document.getElementById('su-error').textContent = e.message
+  }
+}
+
+// If already signed in, skip straight to portal
+;(async () => {
+  try { const me = await API.getMe(); if (me) location.href = 'portal.html' } catch (_) {}
+})()
+</script>
+</body>
+</html>
