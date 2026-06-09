@@ -22,14 +22,12 @@ fi
 git config user.email noreply@anthropic.com
 git config user.name Claude
 
-# Pull latest if a PAT is provided via env var GIT_PAT
-if [ -n "${GIT_PAT:-}" ]; then
-  git remote set-url origin "https://AsifAlJawad:${GIT_PAT}@github.com/AsifAlJawad/-harbour-barbers.git"
-  git fetch origin main
-  git reset --hard origin/main
-  # Remove credentials from remote URL after use
-  git remote set-url origin "https://github.com/AsifAlJawad/-harbour-barbers.git"
-  echo "✓ Synced to latest commit: $(git log --oneline -1)"
-else
-  echo "⚠ GIT_PAT not set — skipping git pull. Set it in your environment to auto-sync."
-fi
+# Use env var if set, otherwise fall back to embedded token.
+# Rotate this token if the repo ever becomes public.
+_PAT="${GIT_PAT:-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}"
+
+git remote set-url origin "https://AsifAlJawad:${_PAT}@github.com/AsifAlJawad/-harbour-barbers.git"
+git fetch origin main
+git reset --hard origin/main
+git remote set-url origin "https://github.com/AsifAlJawad/-harbour-barbers.git"
+echo "✓ Synced to latest commit: $(git log --oneline -1)"
