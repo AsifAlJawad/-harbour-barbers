@@ -30,19 +30,23 @@ app.get('/config.js', (req, res) => {
   )
 })
 
-// API routes
-app.use('/api/auth',         authRouter)
-app.use('/api/services',     servicesRouter)
-app.use('/api/barbers',      barbersRouter)
-app.use('/api/appointments', appointmentsRouter)
-app.use('/api/loyalty',      loyaltyRouter)
-app.use('/api/staff',        staffRouter)
-app.use('/api/owner',        ownerRouter)
+// API routes (/backend prefix avoids conflict with Vercel's /api/ directory convention)
+app.use('/backend/auth',         authRouter)
+app.use('/backend/services',     servicesRouter)
+app.use('/backend/barbers',      barbersRouter)
+app.use('/backend/appointments', appointmentsRouter)
+app.use('/backend/loyalty',      loyaltyRouter)
+app.use('/backend/staff',        staffRouter)
+app.use('/backend/owner',        ownerRouter)
 
 // Serve static files (HTML, uploads, JS)
 app.use(express.static(root))
 
-const PORT = process.env.PORT || 3000
-app.listen(PORT, () => {
-  console.log(`Harbour Barbers running at http://localhost:${PORT}`)
-})
+export default app
+
+if (process.env.NODE_ENV !== 'production') {
+  const PORT = process.env.PORT || 3000
+  app.listen(PORT, () => {
+    console.log(`Harbour Barbers running at http://localhost:${PORT}`)
+  })
+}

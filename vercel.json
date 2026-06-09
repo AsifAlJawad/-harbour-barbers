@@ -1,0 +1,6 @@
+{
+  "rewrites": [
+    { "source": "/config.js",        "destination": "/api/index.js" },
+    { "source": "/backend/:path*",   "destination": "/api/index.js" }
+  ]
+}
