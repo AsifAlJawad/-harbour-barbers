@@ -1,0 +1,24 @@
+{
+  "expo": {
+    "name": "Harbour Barbers",
+    "slug": "harbour-barbers",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "harbourbarbers",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "backgroundColor": "#f7f5f0"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.harbourbarbers.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#f7f5f0"
+      },
+      "package": "com.harbourbarbers.app"
+    },
+    "plugins": ["expo-router"]
+  }
+}
