@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Harbour Barbers — Website Walkthrough</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,400;1,600&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: #0f0d0e; font-family: 'DM Sans', sans-serif; overflow: hidden; }
+  #root { position: fixed; inset: 0; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin="anonymous"></script>
+<script type="text/babel">
+const { useState, useEffect, useRef } = React;
+
+const C = {
+  bg:     '#0f0d0e',
+  card:   '#1a1517',
+  border: '#2a2325',
+  accent: '#8b2635',
+  gold:   '#c9a96e',
+  cream:  '#f7f5f0',
+  muted:  '#8a7f7a',
+  tan:    '#4a3f3a',
+  green:  '#2a6a4a',
+};
+
+const slides = [
+  { id: 'intro' },
+  { id: 'landing' },
+  { id: 'signin' },
+  { id: 'book-service' },
+  { id: 'book-time' },
+  { id: 'portal' },
+  { id: 'staff' },
+  { id: 'owner' },
+  { id: 'close' },
+];
+
+/* ── tiny animation hook ── */
+function useIn(active) {
+  const [vis, setVis] = useState(false);
+  useEffect(() => {
+    if (active) { const t = setTimeout(() => setVis(true), 60); return () => clearTimeout(t); }
+    else setVis(false);
+  }, [active]);
+  return vis;
+}
+
+/* ── Browser shell ── */
+function Browser({ url, children, style }) {
+  return (
+    <div style={{ borderRadius: 10, overflow: 'hidden', boxShadow: '0 32px 80px rgba(0,0,0,.6)', border: `1px solid ${C.border}`, ...style }}>
+      <div style={{ background: '#1e1a1b', padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ display: 'flex', gap: 5 }}>
+          {['#ff5f57','#ffbd2e','#28c840'].map(c => <div key={c} style={{ width: 8, height: 8, borderRadius: '50%', background: c }}/>)}
+        </div>
+        <div style={{ flex: 1, background: '#141011', borderRadius: 4, padding: '3px 10px', fontSize: 10, color: C.muted, fontFamily: 'monospace' }}>
+          {url}
+        </div>
+      </div>
+      <div style={{ background: '#f7f5f0' }}>{children}</div>
+    </div>
+  );
+}
+
+/* ── Slides ── */
+function SlideIntro({ active }) {
+  const vis = useIn(active);
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', textAlign: 'center' }}>
+      <div style={{ opacity: vis ? 1 : 0, transform: vis ? 'none' : 'translateY(24px)', transition: 'all .6s ease', marginBottom: 16 }}>
+        <div style={{ fontSize: 11, letterSpacing: 4, textTransform: 'uppercase', color: C.gold, marginBottom: 20 }}>Website Walkthrough</div>
+        <div style={{ fontFamily: 'Cormorant Garamond', fontSize: 'clamp(52px,8vw,96px)', fontWeight: 300, color: C.cream, lineHeight: 1 }}>
+          Harbour<br/><em style={{ color: C.accent }}>Barbers</em>
+        </div>
+      </div>
+      <div style={{ opacity: vis ? 1 : 0, transition: 'all .6s ease .3s', color: C.muted, fontSize: 15, maxWidth: 440, lineHeight: 1.7, marginTop: 24 }}>
+        A complete digital platform — public website, customer portal, staff dashboard, and owner analytics.
+      </div>
+      <div style={{ opacity: vis ? 1 : 0, transition: 'all .6s ease .5s', marginTop: 48, display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
+        {['Landing Page','Customer Portal','Staff Dashboard','Owner Analytics'].map(l => (
+          <div key={l} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 20, padding: '6px 16px', fontSize: 12, color: C.muted }}>{l}</div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SlideLanding({ active }) {
+  const vis = useIn(active);
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr', gap: 64, alignItems: 'center', height: '100%', padding: '0 60px' }}>
+      <div style={{ opacity: vis ? 1 : 0, transform: vis ? 'none' : 'translateX(-20px)', transition: 'all .6s ease' }}>
+        <div style={{ fontSize: 11, letterSpacing: 3, textTransform: 'uppercase', color: C.gold, marginBottom: 16 }}>01 / Landing Page</div>
+        <div style={{ fontFamily: 'Cormorant Garamond', fontSize: 42, fontWeight: 300, color: C.cream, lineHeight: 1.15, marginBottom: 20 }}>
+          First impressions<br/>that <em style={{ color: C.accent }}>convert</em>
+        </div>
+        <div style={{ color: C.muted, fontSize: 14, lineHeight: 1.8, marginBottom: 28 }}>
+          A premium landing page that showcases the brand, displays services and pricing, and gets customers to book in one click.
+        </div>
+        {['Hero with brand photography','Services & pricing showcase','Loyalty programme highlights','Sign Up / Book Now CTAs'].map(t => (
+          <div key={t} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+            <div style={{ width: 16, height: 16, borderRadius: '50%', background: C.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <span style={{ color: '#fff', fontSize: 9, fontWeight: 700 }}>✓</span>
+            </div>
+            <span style={{ color: C.muted, fontSize: 13 }}>{t}</span>
+          </div>
+        ))}
+      </div>
+      <div style={{ opacity: vis ? 1 : 0, transform: vis ? 'none' : 'translateY(30px)', transition: 'all .7s ease .15s' }}>
+        <Browser url="harbour-barbers.vercel.app">
+          <div style={{ background: '#18181a', minHeight: 340, position: 'relative', overflow: 'hidden' }}>
+            {/* nav */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 20px', borderBottom: '1px solid rgba(255,255,255,.06)' }}>
+              <div style={{ fontFamily: 'Cormorant Garamond', color: '#fff', fontSize: 14, fontWeight: 600 }}>HARBOUR <span style={{ color: C.accent }}>BARBERS</span></div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <div style={{ background: 'transparent', border: '1px solid rgba(255,255,255,.15)', color: '#fff', fontSize: 9, padding: '4px 10px', borderRadius: 4 }}>Sign In</div>
+                <div style={{ background: C.accent, color: '#fff', fontSize: 9, padding: '4px 10px', borderRadius: 4 }}>Book Now</div>
+              </div>
+            </div>
+            {/* hero */}
+            <div style={{ padding: '32px 20px 24px', textAlign: 'center' }}>
+              <div style={{ fontSize: 9, letterSpacing: 3, textTransform: 'uppercase', color: C.gold, marginBottom: 10 }}>Est. 2024 · Harbour District</div>
+              <div style={{ fontFamily: 'Cormorant Garamond', color: '#fff', fontSize: 32, fontWeight: 300, lineHeight: 1.1, marginBottom: 20 }}>
+                The Art of<br/><em style={{ color: C.accent }}>The Perfect Cut</em>
+              </div>
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginBottom: 20 }}>
+                {[['6','Barbers'],['12','Services'],['4','Tiers']].map(([n,l]) => (
+                  <div key={l} style={{ background: 'rgba(255,255,255,.05)', border: '1px solid rgba(255,255,255,.1)', borderRadius: 6, padding: '8px 14px', textAlign: 'center' }}>
+                    <div style={{ color: C.accent, fontSize: 18, fontWeight: 700, fontFamily: 'Cormorant Garamond' }}>{n}</div>
+                    <div style={{ color: '#aaa', fontSize: 8 }}>{l}</div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ background: C.accent, color: '#fff', fontSize: 10, padding: '9px 22px', borderRadius: 4, display: 'inline-block' }}>Book Appointment →</div>
+            </div>
+            {/* services strip */}
+            <div style={{ background: 'rgba(255,255,255,.03)', borderTop: '1px solid rgba(255,255,255,.06)', padding: '12px 20px', display: 'flex', gap: 10 }}>
+              {['Classic Haircut · $35','Haircut + Beard · $55','Hot Towel Shave · $45'].map(s => (
+                <div key={s} style={{ flex: 1, background: 'rgba(255,255,255,.05)', borderRadius: 6, padding: '8px', textAlign: 'center' }}>
+                  <div style={{ color: '#fff', fontSize: 8, fontWeight: 600 }}>{s.split(' · ')[0]}</div>
+                  <div style={{ color: C.accent, fontSize: 8, marginTop: 2 }}>{s.split(' · ')[1]}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </Browser>
+      </div>
+    </div>
+  );
+}
+
+function SlideSignIn({ active }) {
+  const vis = useIn(active);
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 64, alignItems: 'center', height: '100%', padding: '0 60px' }}>
+      <div style={{ opacity: vis ? 1 : 0, transform: vis ? 'none' : 'translateY(30px)', transition: 'all .7s ease .1s' }}>
+        <Browser url="harbour-barbers.vercel.app">
+          <div style={{ background: '#f7f5f0', minHeight: 340, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+            <div style={{ background: '#fff', borderRadius: 10, padding: '28px 24px', width: '100%', maxWidth: 300, border: '1px solid #eeebe4', boxShadow: '0 4px 24px rgba(0,0,0,.06)' }}>
+              <div style={{ fontFamily: 'Cormorant Garamond', fontSize: 22, color: '#18181a', marginBottom: 4 }}>Welcome back</div>
+              <div style={{ fontSize: 11, color: '#6a6560', marginBottom: 20 }}>Sign in to your account</div>
+              {['Email address','Password'].map(p => (
+                <div key={p} style={{ background: '#f7f5f0', border: '1px solid #eeebe4', borderRadius: 6, padding: '9px 12px', marginBottom: 10, fontSize: 11, color: '#aaa' }}>{p}</div>
+              ))}
+              <div style={{ background: C.accent, color: '#fff', fontSize: 11, padding: '10px', borderRadius: 6, textAlign: 'center', marginTop: 4 }}>Sign In</div>
+              <div style={{ textAlign: 'center', marginTop: 14, fontSize: 10, color: '#6a6560' }}>Don't have an account? <span style={{ color: C.accent }}>Sign up</span></div>
+            </div>
+          </div>
+        </Browser>
+      </div>
+      <div style={{ opacity: vis ? 1 : 0, transform: vis ? 'none' : 'translateX(20px)', transition: 'all .6s ease' }}>
+        <div style={{ fontSize: 11, letterSpacing: 3, textTransform: 'uppercase', color: C.gold, marginBottom: 16 }}>02 / Authentication</div>
+        <div style={{ fontFamily: 'Cormorant Garamond', fontSize: 42, fontWeight: 300, color: C.cream, lineHeight: 1.15, marginBottom: 20 }}>
+          Secure sign in<br/><em style={{ color: C.accent }}>& sign up</em>
+        </div>
+        <div style={{ color: C.muted, fontSize: 14, lineHeight: 1.8, marginBottom: 28 }}>
+          Powered by Supabase Auth. Sessions persist across visits — customers stay logged in automatically.
+        </div>
+        {['Email + password sign up','Instant login, no email verification wait','Session stored securely in browser','Role-based redirect after sign in'].map(t => (
+          <div key={t} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+            <div style={{ width: 16, height: 16, borderRadius: '50%', background: C.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <span style={{ color: '#fff', fontSize: 9, fontWeight: 700 }}>✓</span>
+            </div>
+            <span style={{ color: C.muted, fontSize: 13 }}>{t}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SlideBookService({ active }) {
+  const vis = useIn(active);
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr', gap: 64, alignItems: 'center', height: '100%', padding: '0 60px' }}>
+      <div style={{ opacity: vis ? 1 : 0, transform: vis ? 'none' : 'translateX(-20px)', transition: 'all .6s ease' }}>
+        <div style={{ fontSize: 11, letterSpacing: 3, textTransform: 'uppercase', color: C.gold, marginBottom: 16 }}>03 / Booking Flow</div>
+        <div style={{ fontFamily: 'Cormorant Garamond', fontSize: 42, fontWeight: 300, color: C.cream, lineHeight: 1.15, marginBottom: 20 }}>
+          Book in<br/><em style={{ color: C.accent }}>3 steps</em>
+        </div>
+        <div style={{ color: C.muted, fontSize: 14, lineHeight: 1.8, marginBottom: 28 }}>
+          Customers pick a service, choose an available barber, then select a time slot. Confirmed in seconds.
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {[['1','Service','Browse all available services with prices'],['2','Barber','Choose from available barbers'],['3','Time','Pick from open slots for today or any date']].map(([n,t,d]) => (
+            <div key={n} style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
+              <div style={{ width: 28, height: 28, borderRadius: '50%', background: C.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontWeight: 700, color: '#fff', fontSize: 12 }}>{n}</div>
+              <div>
+                <div style={{ color: C.cream, fontSize: 13, fontWeight: 600, marginBottom: 2 }}>{t}</div>
+                <div style={{ color: C.muted, fontSize: 12 }}>{d}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div style={{ opacity: vis ? 1 : 0, transform: vis ? 'none' : 'translateY(30px)', transition: 'all .7s ease .15s' }}>
+        <Browser url="harbour-barbers.vercel.app/portal.html">
+          <div style={{ display: 'flex', minHeight: 340 }}>
+            <div style={{ width: 120, background: '#18181a', padding: '14px 10px', flexShrink: 0 }}>
+              <div style={{ fontFamily: 'Cormorant Garamond', color: '#fff', fontSize: 11, marginBottom: 2 }}>HARBOUR</div>
+              <div style={{ fontFamily: 'Cormorant Garamond', color: C.accent, fontSize: 11, marginBottom: 3 }}>BARBERS</div>
+              <div style={{ color: '#555', fontSize: 7, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 16, borderBottom: '1px solid rgba(255,255,255,.06)', paddingBottom: 10 }}>Member Portal</div>
+              {[['✂','Book',true],['📅','Bookings',false],['⭐','Rewards',false],['👤','Profile',false]].map(([icon,label,active]) => (
+                <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 8px', borderRadius: 5, marginBottom: 2, background: active ? 'rgba(139,38,53,.2)' : 'none' }}>
+                  <span style={{ fontSize: 9 }}>{icon}</span>
+                  <span style={{ fontSize: 9, color: active ? C.accent : '#666' }}>{label}</span>
+                </div>
+              ))}
+            </div>
+            <div style={{ flex: 1, padding: '14px', background: '#f7f5f0' }}>
+              <div style={{ fontFamily: 'Cormorant Garamond', fontSize: 18, color: '#18181a', marginBottom: 2 }}>Book Appointment</div>
+              <div style={{ fontSize: 8, color: '#6a6560', marginBottom: 12 }}>Schedule your next visit in 3 quick steps</div>
+              <div style={{ display: 'flex', marginBottom: 14, gap: 0 }}>
+                {[['1','Service',true],['2','Schedule',false],['3','Confirm',false]].map(([n,l,a]) => (
+                  <div key={n} style={{ flex: 1, textAlign: 'center' }}>
+                    <div style={{ width: 16, height: 16, borderRadius: '50%', background: a ? C.accent : '#eeebe4', color: a ? '#fff' : '#aaa', fontSize: 8, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 3px' }}>{n}</div>
+                    <div style={{ fontSize: 7, color: a ? C.accent : '#aaa', fontWeight: a ? 600 : 400 }}>{l}</div>
+                  </div>
+                ))}
+              </div>
+              {[['Classic Haircut','30 min','$35'],['Haircut + Beard','45 min','$55'],['Hot Towel Shave','40 min','$45'],['Kids Cut','20 min','$25']].map(([n,d,p]) => (
+                <div key={n} style={{ background: '#fff', border: '1px solid #eeebe4', borderRadius: 6, padding: '8px 10px', marginBottom: 6, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <div style={{ fontSize: 9, fontWeight: 600, color: '#18181a' }}>{n}</div>
+                    <div style={{ fontSize: 8, color: '#6a6560' }}>{d}</div>
+                  </div>
+                  <div style={{ fontSize: 9, fontWeight: 600, color: C.accent }}>{p}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </Browser>
+      </div>
+    </div>
+  );
+}
+
+function SlideBookTime({ active }) {
+  const vis = useIn(active);
+  const slots = ['09:00','09:30','10:00','10:30','11:00','11:30','14:00','14:30','15:00'];
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 64, alignItems: 'center', height: '100%', padding: '0 60px' }}>
+      <div style={{ opacity: vis ? 1 : 0, transform: vis ? 'none' : 'translateY(30px)', transition: 'all .7s ease .1s' }}>
+        <Browser url="harbour-barbers.vercel.app/portal.html">
+          <div style={{ display: 'flex', minHeight: 340 }}>
+            <div style={{ width: 120, background: '#18181a', padding: '14px 10px', flexShrink: 0 }}>
+              <div style={{ fontFamily: 'Cormorant Garamond', color: '#fff', fontSize: 11 }}>HARBOUR</div>
+              <div style={{ fontFamily: 'Cormorant Garamond', color: C.accent, fontSize: 11, marginBottom: 14 }}>BARBERS</div>
+              {[['✂','Book',true],['📅','Bookings',false],['⭐','Rewards',false]].map(([icon,label,a]) => (
+                <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 8px', borderRadius: 5, marginBottom: 2, background: a ? 'rgba(139,38,53,.2)' : 'none' }}>
+                  <span style={{ fontSize: 9 }}>{icon}</span>
+                  <span style={{ fontSize: 9, color: a ? C.accent : '#666' }}>{label}</span>
+                </div>
+              ))}
+            </div>
+            <div style={{ flex: 1, padding: '14px', background: '#f7f5f0' }}>
+              <div style={{ fontFamily: 'Cormorant Garamond', fontSize: 16, color: '#18181a', marginBottom: 10 }}>Pick a time for today</div>
+              <div style={{ background: '#fff', border: '1px solid #eeebe4', borderRadius: 6, padding: 8, marginBottom: 10 }}>
+                <div style={{ fontSize: 8, color: '#6a6560', marginBottom: 2 }}>Service</div>
+                <div style={{ fontSize: 10, fontWeight: 600, color: '#18181a' }}>Haircut + Beard · $55</div>
+              </div>
+              <div style={{ background: '#fff', border: '1px solid #eeebe4', borderRadius: 6, padding: 8, marginBottom: 10 }}>
+                <div style={{ fontSize: 8, color: '#6a6560', marginBottom: 2 }}>Barber</div>
+                <div style={{ fontSize: 10, fontWeight: 600, color: '#18181a' }}>Marcus</div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 4 }}>
+                {slots.map((s,i) => (
+                  <div key={s} style={{ background: i===2 ? C.accent : '#fff', border: `1px solid ${i===2 ? C.accent : '#eeebe4'}`, borderRadius: 5, padding: '5px', textAlign: 'center' }}>
+                    <div style={{ fontSize: 9, fontWeight: 600, color: i===2 ? '#fff' : '#18181a' }}>{s}</div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ background: C.accent, color: '#fff', fontSize: 10, padding: '8px', borderRadius: 6, textAlign: 'center', marginTop: 10 }}>Confirm Booking</div>
+            </div>
+          </div>
+        </Browser>
+      </div>
+      <div style={{ opacity: vis ? 1 : 0, transform: vis ? 'none' : 'translateX(20px)', transition: 'all .6s ease' }}>
+        <div style={{ fontSize: 11, letterSpacing: 3, textTransform: 'uppercase', color: C.gold, marginBottom: 16 }}>03 / Booking Flow</div>
+        <div style={{ fontFamily: 'Cormorant Garamond', fontSize: 42, fontWeight: 300, color: C.cream, lineHeight: 1.15, marginBottom: 20 }}>
+          Real-time<br/><em style={{ color: C.accent }}>availability</em>
+        </div>
+        <div style={{ color: C.muted, fontSize: 14, lineHeight: 1.8, marginBottom: 28 }}>
+          Time slots are pulled live from the database. If a barber is booked, that slot disappears instantly — no double bookings.
+        </div>
+        {['Live slot availability per barber','Conflict detection prevents doubles','Booking confirmation email sent automatically','Loyalty points awarded on every booking'].map(t => (
+          <div key={t} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+            <div style={{ width: 16, height: 16, borderRadius: '50%', background: C.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <span style={{ color: '#fff', fontSize: 9, fontWeight: 700 }}>✓</span>
+            </div>
+            <span style={{ color: C.muted, fontSize: 13 }}>{t}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SlidePortal({ active }) {
+  const vis = useIn(active);
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr', gap: 64, alignItems: 'center', height: '100%', padding: '0 60px' }}>
+      <div style={{ opacity: vis ? 1 : 0, transform: vis ? 'none' : 'translateX(-20px)', transition: 'all .6s ease' }}>
+        <div style={{ fontSize: 11, letterSpacing: 3, textTransform: 'uppercase', color: C.gold, marginBottom: 16 }}>04 / Customer Portal</div>
+        <div style={{ fontFamily: 'Cormorant Garamond', fontSize: 42, fontWeight: 300, color: C.cream, lineHeight: 1.15, marginBottom: 20 }}>
+          Manage bookings<br/><em style={{ color: C.accent }}>& rewards</em>
+        </div>
+        <div style={{ color: C.muted, fontSize: 14, lineHeight: 1.8, marginBottom: 28 }}>
+          Customers can view, reschedule, or cancel upcoming appointments. Loyalty points and tier status update automatically.
+        </div>
+        {['Upcoming & past appointment history','One-click reschedule or cancel','Bronze → Silver → Gold → Platinum tiers','Points earned on every booking'].map(t => (
+          <div key={t} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+            <div style={{ width: 16, height: 16, borderRadius: '50%', background: C.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <span style={{ color: '#fff', fontSize: 9, fontWeight: 700 }}>✓</span>
+            </div>
+            <span style={{ color: C.muted, fontSize: 13 }}>{t}</span>
+          </div>
+        ))}
+      </div>
+      <div style={{ opacity: vis ? 1 : 0, transform: vis ? 'none' : 'translateY(30px)', transition: 'all .7s ease .15s' }}>
+        <Browser url="harbour-barbers.vercel.app/portal.html">
+          <div style={{ display: 'flex', minHeight: 340 }}>
+            <div style={{ width: 120, background: '#18181a', padding: '14px 10px', flexShrink: 0 }}>
+              <div style={{ fontFamily: 'Cormorant Garamond', color: '#fff', fontSize: 11 }}>HARBOUR</div>
+              <div style={{ fontFamily: 'Cormorant Garamond', color: C.accent, fontSize: 11, marginBottom: 10 }}>BARBERS</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 14, paddingBottom: 10, borderBottom: '1px solid rgba(255,255,255,.06)' }}>
+                <div style={{ width: 22, height: 22, borderRadius: '50%', background: C.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <span style={{ color: '#fff', fontSize: 9, fontWeight: 700 }}>J</span>
+                </div>
+                <div>
+                  <div style={{ color: '#fff', fontSize: 8 }}>James K.</div>
+                  <div style={{ color: C.gold, fontSize: 7 }}>Gold · 520 pts</div>
+                </div>
+              </div>
+              {[['✂','Book',false],['📅','Bookings',true],['⭐','Rewards',false],['👤','Profile',false]].map(([icon,label,a]) => (
+                <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 8px', borderRadius: 5, marginBottom: 2, background: a ? 'rgba(139,38,53,.2)' : 'none' }}>
+                  <span style={{ fontSize: 9 }}>{icon}</span>
+                  <span style={{ fontSize: 9, color: a ? C.accent : '#666' }}>{label}</span>
+                </div>
+              ))}
+            </div>
+            <div style={{ flex: 1, padding: '14px', background: '#f7f5f0' }}>
+              <div style={{ fontFamily: 'Cormorant Garamond', fontSize: 18, color: '#18181a', marginBottom: 12 }}>My Bookings</div>
+              {[['Haircut + Beard','Marcus','Mon 23 Jun · 9:00 AM','confirmed','#e8f5ef','#2a6a4a'],['Classic Haircut','Daniel','Sat 28 Jun · 2:00 PM','pending','#e8eef5','#3d5a80'],['Hot Towel Shave','Marcus','Tue 1 Jul · 11:00 AM','confirmed','#e8f5ef','#2a6a4a']].map(([s,b,d,status,bg,col]) => (
+                <div key={d} style={{ background: '#fff', border: '1px solid #eeebe4', borderRadius: 6, padding: '8px', marginBottom: 6 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ fontSize: 9, fontWeight: 600, color: '#18181a' }}>{s}</div>
+                    <div style={{ background: bg, color: col, fontSize: 7, padding: '2px 6px', borderRadius: 8 }}>{status}</div>
+                  </div>
+                  <div style={{ fontSize: 8, color: '#6a6560' }}>with {b} · {d}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </Browser>
+      </div>
+    </div>
+  );
+}
+
+function SlideStaff({ active }) {
+  const vis = useIn(active);
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 64, alignItems: 'center', height: '100%', padding: '0 60px' }}>
+      <div style={{ opacity: vis ? 1 : 0, transform: vis ? 'none' : 'translateY(30px)', transition: 'all .7s ease .1s' }}>
+        <Browser url="harbour-barbers.vercel.app/staff.html">
+          <div style={{ display: 'flex', minHeight: 340 }}>
+            <div style={{ width: 120, background: '#18181a', padding: '14px 10px', flexShrink: 0 }}>
+              <div style={{ fontFamily: 'Cormorant Garamond', color: '#fff', fontSize: 11 }}>HARBOUR</div>
+              <div style={{ fontFamily: 'Cormorant Garamond', color: C.accent, fontSize: 11, marginBottom: 14 }}>BARBERS</div>
+              <div style={{ fontSize: 7, letterSpacing: 1, color: '#555', textTransform: 'uppercase', marginBottom: 10 }}>Staff Portal</div>
+              {[['📅','Schedule',true],['➕','Walk-in',false],['🔍','Customers',false]].map(([icon,label,a]) => (
+                <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 8px', borderRadius: 5, marginBottom: 2, background: a ? 'rgba(139,38,53,.2)' : 'none' }}>
+                  <span style={{ fontSize: 9 }}>{icon}</span>
+                  <span style={{ fontSize: 9, color: a ? C.accent : '#666' }}>{label}</span>
+                </div>
+              ))}
+            </div>
+            <div style={{ flex: 1, padding: '14px', background: '#f7f5f0' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <div style={{ fontFamily: 'Cormorant Garamond', fontSize: 16, color: '#18181a' }}>Mon 23 Jun</div>
+                <div style={{ display: 'flex', gap: 4 }}>
+                  <div style={{ fontSize: 9, color: '#aaa' }}>‹</div>
+                  <div style={{ fontSize: 9, color: '#aaa' }}>›</div>
+                </div>
+              </div>
+              {[['09:00','James K.','Classic Haircut · $35','confirmed','#2a6a4a'],['10:30','Ryan P.','Haircut + Beard · $55','completed','#6a6560'],['11:30','Daniel M.','Hot Towel Shave · $45','confirmed','#2a6a4a'],['14:00','Walk-in','Classic Haircut · $35','confirmed','#2a6a4a']].map(([t,n,s,status,col]) => (
+                <div key={t} style={{ background: '#fff', border: '1px solid #eeebe4', borderLeft: `3px solid ${col}`, borderRadius: 6, padding: '7px 8px', marginBottom: 6 }}>
+                  <div style={{ fontSize: 8, color: '#aaa', marginBottom: 2 }}>{t}</div>
+                  <div style={{ fontSize: 9, fontWeight: 600, color: '#18181a' }}>{n}</div>
+                  <div style={{ fontSize: 8, color: '#6a6560' }}>{s}</div>
+                  <div style={{ display: 'inline-block', fontSize: 7, padding: '1px 6px', borderRadius: 8, marginTop: 3, background: col+'22', color: col }}>{status}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </Browser>
+      </div>
+      <div style={{ opacity: vis ? 1 : 0, transform: vis ? 'none' : 'translateX(20px)', transition: 'all .6s ease' }}>
+        <div style={{ fontSize: 11, letterSpacing: 3, textTransform: 'uppercase', color: C.gold, marginBottom: 16 }}>05 / Staff Dashboard</div>
+        <div style={{ fontFamily: 'Cormorant Garamond', fontSize: 42, fontWeight: 300, color: C.cream, lineHeight: 1.15, marginBottom: 20 }}>
+          Run the floor<br/><em style={{ color: C.accent }}>effortlessly</em>
+        </div>
+        <div style={{ color: C.muted, fontSize: 14, lineHeight: 1.8, marginBottom: 28 }}>
+          Staff get a real-time view of the day. Update statuses, add walk-ins, and manage barber availability — all in one place.
+        </div>
+        {['Daily appointment list per barber','Mark confirmed, completed, or no-show','Add walk-in customers instantly','Toggle barber on/off availability'].map(t => (
+          <div key={t} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+            <div style={{ width: 16, height: 16, borderRadius: '50%', background: C.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <span style={{ color: '#fff', fontSize: 9, fontWeight: 700 }}>✓</span>
+            </div>
+            <span style={{ color: C.muted, fontSize: 13 }}>{t}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SlideOwner({ active }) {
+  const vis = useIn(active);
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr', gap: 64, alignItems: 'center', height: '100%', padding: '0 60px' }}>
+      <div style={{ opacity: vis ? 1 : 0, transform: vis ? 'none' : 'translateX(-20px)', transition: 'all .6s ease' }}>
+        <div style={{ fontSize: 11, letterSpacing: 3, textTransform: 'uppercase', color: C.gold, marginBottom: 16 }}>06 / Owner Analytics</div>
+        <div style={{ fontFamily: 'Cormorant Garamond', fontSize: 42, fontWeight: 300, color: C.cream, lineHeight: 1.15, marginBottom: 20 }}>
+          Know your<br/><em style={{ color: C.accent }}>numbers</em>
+        </div>
+        <div style={{ color: C.muted, fontSize: 14, lineHeight: 1.8, marginBottom: 28 }}>
+          Real-time revenue, appointment volume, new customers, top services, and per-barber performance — always up to date.
+        </div>
+        {['Monthly revenue & appointment count','Top services by bookings & revenue','Per-barber performance breakdown','Manage service pricing directly'].map(t => (
+          <div key={t} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+            <div style={{ width: 16, height: 16, borderRadius: '50%', background: C.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <span style={{ color: '#fff', fontSize: 9, fontWeight: 700 }}>✓</span>
+            </div>
+            <span style={{ color: C.muted, fontSize: 13 }}>{t}</span>
+          </div>
+        ))}
+      </div>
+      <div style={{ opacity: vis ? 1 : 0, transform: vis ? 'none' : 'translateY(30px)', transition: 'all .7s ease .15s' }}>
+        <Browser url="harbour-barbers.vercel.app/owner.html">
+          <div style={{ display: 'flex', minHeight: 340 }}>
+            <div style={{ width: 120, background: '#18181a', padding: '14px 10px', flexShrink: 0 }}>
+              <div style={{ fontFamily: 'Cormorant Garamond', color: '#fff', fontSize: 11 }}>HARBOUR</div>
+              <div style={{ fontFamily: 'Cormorant Garamond', color: C.accent, fontSize: 11, marginBottom: 14 }}>BARBERS</div>
+              {[['📊','Overview',true],['📈','Analytics',false],['👥','Staff',false],['⚙','Settings',false]].map(([icon,label,a]) => (
+                <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 8px', borderRadius: 5, marginBottom: 2, background: a ? 'rgba(139,38,53,.2)' : 'none' }}>
+                  <span style={{ fontSize: 9 }}>{icon}</span>
+                  <span style={{ fontSize: 9, color: a ? C.accent : '#666' }}>{label}</span>
+                </div>
+              ))}
+            </div>
+            <div style={{ flex: 1, padding: '14px', background: '#f7f5f0' }}>
+              <div style={{ fontFamily: 'Cormorant Garamond', fontSize: 18, color: '#18181a', marginBottom: 2 }}>Overview</div>
+              <div style={{ fontSize: 8, color: '#aaa', marginBottom: 10 }}>June 2025</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 10 }}>
+                {[['Revenue','$4.2k','↑ 12%','#2a6a4a'],['Appointments','94','↑ 8%','#2a6a4a'],['New Customers','18','This month','#6a6560'],['Avg. Ticket','$44','↑ $3','#2a6a4a']].map(([l,v,s,col]) => (
+                  <div key={l} style={{ background: '#fff', border: '1px solid #eeebe4', borderRadius: 6, padding: '8px' }}>
+                    <div style={{ fontSize: 7, color: '#aaa', textTransform: 'uppercase', marginBottom: 2 }}>{l}</div>
+                    <div style={{ fontFamily: 'Cormorant Garamond', fontSize: 18, color: '#18181a', fontWeight: 600 }}>{v}</div>
+                    <div style={{ fontSize: 7, color: col }}>{s}</div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ fontSize: 8, fontWeight: 600, color: '#18181a', marginBottom: 6 }}>Top Services</div>
+              {[['Classic Haircut',90],['Haircut + Beard',65],['Hot Towel Shave',40]].map(([n,w]) => (
+                <div key={n} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                  <div style={{ fontSize: 7, color: '#aaa', width: 60, flexShrink: 0 }}>{n}</div>
+                  <div style={{ flex: 1, height: 5, background: '#eeebe4', borderRadius: 3, overflow: 'hidden' }}>
+                    <div style={{ width: `${w}%`, height: '100%', background: C.accent, borderRadius: 3 }}/>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </Browser>
+      </div>
+    </div>
+  );
+}
+
+function SlideClose({ active }) {
+  const vis = useIn(active);
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', textAlign: 'center', padding: '0 40px' }}>
+      <div style={{ opacity: vis ? 1 : 0, transform: vis ? 'none' : 'translateY(24px)', transition: 'all .6s ease', marginBottom: 20 }}>
+        <div style={{ fontSize: 11, letterSpacing: 4, textTransform: 'uppercase', color: C.gold, marginBottom: 20 }}>Live at</div>
+        <div style={{ fontFamily: 'Cormorant Garamond', fontSize: 'clamp(36px,6vw,72px)', fontWeight: 300, color: C.cream, lineHeight: 1.1 }}>
+          harbour-barbers<br/><em style={{ color: C.accent }}>.vercel.app</em>
+        </div>
+      </div>
+      <div style={{ opacity: vis ? 1 : 0, transition: 'all .6s ease .3s', display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16, maxWidth: 700, width: '100%', marginTop: 48 }}>
+        {[['🌐','Website','Public landing, sign up, services'],['👤','Portal','Bookings, rewards, profile'],['✂️','Staff','Schedule, walk-ins, status'],['📊','Owner','Revenue, analytics, pricing']].map(([icon,t,d]) => (
+          <div key={t} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: '20px 16px', textAlign: 'center' }}>
+            <div style={{ fontSize: 24, marginBottom: 8 }}>{icon}</div>
+            <div style={{ color: C.cream, fontSize: 13, fontWeight: 600, marginBottom: 4 }}>{t}</div>
+            <div style={{ color: C.muted, fontSize: 11, lineHeight: 1.5 }}>{d}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+const SLIDES = [SlideIntro, SlideLanding, SlideSignIn, SlideBookService, SlideBookTime, SlidePortal, SlideStaff, SlideOwner, SlideClose];
+const TITLES = ['','Landing Page','Authentication','Booking: Service','Booking: Time Slot','Customer Portal','Staff Dashboard','Owner Analytics',''];
+
+function App() {
+  const [cur, setCur] = useState(0);
+  const [prev, setPrev] = useState(null);
+  const [dir, setDir] = useState(1);
+
+  function go(n) {
+    if (n < 0 || n >= SLIDES.length) return;
+    setDir(n > cur ? 1 : -1);
+    setPrev(cur);
+    setCur(n);
+    setTimeout(() => setPrev(null), 500);
+  }
+
+  useEffect(() => {
+    const h = (e) => {
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') go(cur + 1);
+      if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   go(cur - 1);
+    };
+    window.addEventListener('keydown', h);
+    return () => window.removeEventListener('keydown', h);
+  }, [cur]);
+
+  const Slide = SLIDES[cur];
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: C.bg, color: C.cream, display: 'flex', flexDirection: 'column' }} onClick={() => go(cur + 1)}>
+      {/* slide area */}
+      <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', inset: 0, opacity: 1, transition: 'opacity .4s ease' }}>
+          <Slide active={true} />
+        </div>
+      </div>
+
+      {/* bottom bar */}
+      <div style={{ height: 52, borderTop: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', padding: '0 32px', gap: 20, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
+        <div style={{ fontFamily: 'Cormorant Garamond', fontSize: 14, color: C.muted, minWidth: 80 }}>
+          {cur > 0 && cur < SLIDES.length - 1 ? TITLES[cur] : 'Harbour Barbers'}
+        </div>
+        <div style={{ flex: 1, display: 'flex', gap: 4 }}>
+          {SLIDES.map((_, i) => (
+            <div key={i} onClick={() => go(i)} style={{ flex: 1, height: 3, borderRadius: 2, background: i <= cur ? C.accent : C.border, cursor: 'pointer', transition: 'background .3s' }}/>
+          ))}
+        </div>
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+          <div onClick={() => go(cur - 1)} style={{ width: 28, height: 28, borderRadius: 6, border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: cur > 0 ? 'pointer' : 'default', opacity: cur > 0 ? 1 : .3, color: C.muted, fontSize: 13 }}>‹</div>
+          <span style={{ fontSize: 11, color: C.muted }}>{cur + 1} / {SLIDES.length}</span>
+          <div onClick={() => go(cur + 1)} style={{ width: 28, height: 28, borderRadius: 6, border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: cur < SLIDES.length - 1 ? 'pointer' : 'default', opacity: cur < SLIDES.length - 1 ? 1 : .3, color: C.muted, fontSize: 13 }}>›</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
