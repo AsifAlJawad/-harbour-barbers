@@ -3,12 +3,14 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Harbour Barbers — Mobile App Walkthrough</title>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,400;1,600&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<title>Harbour Barbers — Mobile App</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,600&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet"/>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { height: 100%; background: #0f0d0e; font-family: 'DM Sans', sans-serif; overflow: hidden; }
+  html, body { height: 100%; overflow: hidden; background: #080608; }
   #root { position: fixed; inset: 0; }
+  @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
+  @keyframes glow  { 0%,100%{opacity:.4} 50%{opacity:.7} }
 </style>
 </head>
 <body>
@@ -17,357 +19,611 @@
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin="anonymous"></script>
 <script type="text/babel">
-const { useState, useEffect } = React;
+const { useState, useEffect, useRef } = React;
 
-const C = {
-  bg:     '#0f0d0e',
-  card:   '#1a1517',
-  border: '#2a2325',
-  accent: '#8b2635',
-  gold:   '#c9a96e',
-  cream:  '#f7f5f0',
-  muted:  '#8a7f7a',
-  green:  '#2a6a4a',
+/* ── Design tokens ── */
+const T = {
+  bg:      '#080608',
+  surface: 'rgba(255,255,255,0.035)',
+  border:  'rgba(255,255,255,0.07)',
+  accent:  '#8b2635',
+  accentL: '#b03245',
+  gold:    '#c9a96e',
+  cream:   '#f7f5f0',
+  muted:   'rgba(247,245,240,0.45)',
+  dim:     'rgba(247,245,240,0.18)',
 };
 
-function useIn(active) {
-  const [vis, setVis] = useState(false);
+/* ── Entrance animation hook ── */
+function useEnter(active, delay = 0) {
+  const [on, setOn] = useState(false);
   useEffect(() => {
-    if (active) { const t = setTimeout(() => setVis(true), 60); return () => clearTimeout(t); }
-    else setVis(false);
-  }, [active]);
-  return vis;
+    if (!active) { setOn(false); return; }
+    const t = setTimeout(() => setOn(true), delay + 80);
+    return () => clearTimeout(t);
+  }, [active, delay]);
+  return on;
 }
 
-/* ── Phone shell ── */
-function Phone({ children, activeTab }) {
-  const tabs = [['✂️','Book'],['📅','Bookings'],['⭐','Rewards'],['👤','Profile']];
+/* ── Noise texture overlay (CSS-only grain) ── */
+const Noise = () => (
+  <div style={{
+    position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 50,
+    backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E")`,
+    backgroundSize: '128px 128px', opacity: .6,
+  }}/>
+);
+
+/* ── Realistic iPhone frame ── */
+function Phone({ children, glow = T.accent, style = {} }) {
   return (
-    <div style={{ width: 260, background: '#111', borderRadius: 44, padding: 10, boxShadow: '0 40px 100px rgba(0,0,0,.7), inset 0 0 0 1px rgba(255,255,255,.08)', position: 'relative' }}>
-      {/* notch */}
-      <div style={{ position: 'absolute', top: 18, left: '50%', transform: 'translateX(-50%)', width: 80, height: 6, background: '#222', borderRadius: 3, zIndex: 10 }}/>
-      <div style={{ borderRadius: 36, overflow: 'hidden', background: '#f7f5f0', minHeight: 480, display: 'flex', flexDirection: 'column' }}>
-        <div style={{ flex: 1 }}>{children}</div>
-        {activeTab !== null && (
-          <div style={{ background: '#fff', borderTop: '1px solid #eeebe4', display: 'flex', padding: '8px 0 10px' }}>
-            {tabs.map(([icon, label], i) => (
-              <div key={label} style={{ flex: 1, textAlign: 'center' }}>
-                <div style={{ fontSize: 17 }}>{icon}</div>
-                <div style={{ fontSize: 8, color: activeTab === i ? C.accent : '#aaa', marginTop: 2, fontWeight: activeTab === i ? 600 : 400 }}>{label}</div>
-              </div>
-            ))}
+    <div style={{ position: 'relative', ...style }}>
+      {/* ambient glow */}
+      <div style={{
+        position: 'absolute', top: '10%', left: '10%', right: '10%', bottom: '5%',
+        background: glow, filter: 'blur(60px)', opacity: .22,
+        borderRadius: '50%', animation: 'glow 4s ease-in-out infinite',
+      }}/>
+      {/* phone body */}
+      <div style={{
+        position: 'relative', width: 280, background: 'linear-gradient(160deg,#2a2a2c 0%,#1a1a1c 50%,#111113 100%)',
+        borderRadius: 52, padding: '14px 12px',
+        boxShadow: '0 0 0 1px rgba(255,255,255,.12), 0 0 0 1.5px rgba(0,0,0,.8), 0 40px 120px rgba(0,0,0,.8), 0 8px 30px rgba(0,0,0,.5)',
+      }}>
+        {/* left buttons */}
+        <div style={{ position:'absolute', left:-3, top:90, width:3, height:32, background:'#2a2a2c', borderRadius:'3px 0 0 3px', boxShadow:'-1px 0 2px rgba(0,0,0,.4)' }}/>
+        <div style={{ position:'absolute', left:-3, top:134, width:3, height:62, background:'#2a2a2c', borderRadius:'3px 0 0 3px', boxShadow:'-1px 0 2px rgba(0,0,0,.4)' }}/>
+        <div style={{ position:'absolute', left:-3, top:206, width:3, height:62, background:'#2a2a2c', borderRadius:'3px 0 0 3px', boxShadow:'-1px 0 2px rgba(0,0,0,.4)' }}/>
+        {/* right button */}
+        <div style={{ position:'absolute', right:-3, top:160, width:3, height:90, background:'#2a2a2c', borderRadius:'0 3px 3px 0', boxShadow:'1px 0 2px rgba(0,0,0,.4)' }}/>
+        {/* screen */}
+        <div style={{ borderRadius: 40, overflow: 'hidden', background: '#f7f5f0', position: 'relative', minHeight: 560 }}>
+          {/* dynamic island */}
+          <div style={{
+            position: 'absolute', top: 14, left: '50%', transform: 'translateX(-50%)',
+            width: 90, height: 10, background: '#111', borderRadius: 8, zIndex: 10,
+            boxShadow: '0 0 0 1px rgba(255,255,255,.06)',
+          }}/>
+          <div style={{ display:'flex', flexDirection:'column', height: '100%' }}>
+            {children}
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
 }
 
-/* ── Slide components ── */
+/* ── Status bar ── */
+const StatusBar = ({ dark }) => (
+  <div style={{
+    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+    padding: '10px 20px 0', fontSize: 9, fontWeight: 600,
+    color: dark ? 'rgba(255,255,255,.8)' : 'rgba(0,0,0,.7)',
+  }}>
+    <span>9:41</span>
+    <span style={{ display:'flex', gap:3, alignItems:'center' }}>
+      <span>●●●●</span><span>WiFi</span><span>■</span>
+    </span>
+  </div>
+);
+
+/* ── Tab bar ── */
+const TabBar = ({ active }) => {
+  const tabs = [['✂','Book'],['◻','Bookings'],['★','Rewards'],['○','Profile']];
+  return (
+    <div style={{ background:'#fff', borderTop:'1px solid #eeebe4', display:'flex', paddingBottom: 8, paddingTop: 6, marginTop:'auto' }}>
+      {tabs.map(([icon,label],i) => (
+        <div key={label} style={{ flex:1, textAlign:'center' }}>
+          <div style={{ fontSize: 16, color: i===active ? T.accent : '#bbb' }}>{icon}</div>
+          <div style={{ fontSize: 8, marginTop: 2, color: i===active ? T.accent : '#bbb', fontWeight: i===active ? 600 : 400 }}>{label}</div>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+/* ── Big decorative number ── */
+const Num = ({ n, active }) => {
+  const on = useEnter(active);
+  return (
+    <div style={{
+      fontFamily:'Cormorant Garamond', fontSize:'clamp(140px,18vw,220px)', fontWeight:300,
+      color: 'transparent',
+      WebkitTextStroke: '1px rgba(255,255,255,0.06)',
+      lineHeight:1, userSelect:'none', letterSpacing:'-4px',
+      opacity: on ? 1 : 0, transform: on ? 'none' : 'translateX(-20px)',
+      transition: 'all .8s ease .1s', position:'absolute', top:'-0.15em', left:'-0.08em',
+      pointerEvents:'none',
+    }}>{n}</div>
+  );
+};
+
+/* ── Bullet check ── */
+const Check = ({ children }) => (
+  <div style={{ display:'flex', alignItems:'flex-start', gap:12, marginBottom:11 }}>
+    <div style={{
+      width:18, height:18, borderRadius:'50%', background:T.accent,
+      display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, marginTop:1,
+    }}>
+      <span style={{ color:'#fff', fontSize:9, fontWeight:700 }}>✓</span>
+    </div>
+    <span style={{ color:T.muted, fontSize:13.5, lineHeight:1.55 }}>{children}</span>
+  </div>
+);
+
+/* ── Thin divider line ── */
+const Line = ({ active, delay=0 }) => {
+  const on = useEnter(active, delay);
+  return (
+    <div style={{
+      height:1, background:`linear-gradient(90deg, ${T.accentL}, transparent)`,
+      marginBottom:20, width: on ? '60px' : '0px',
+      transition:'width .6s ease', opacity:.7,
+    }}/>
+  );
+};
+
+/* ═══════════════ SLIDE 1 — INTRO ═══════════════ */
 function SlideIntro({ active }) {
-  const vis = useIn(active);
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', textAlign: 'center', padding: '0 40px' }}>
-      <div style={{ opacity: vis ? 1 : 0, transform: vis ? 'none' : 'translateY(24px)', transition: 'all .6s ease' }}>
-        <div style={{ fontSize: 11, letterSpacing: 4, textTransform: 'uppercase', color: C.gold, marginBottom: 20 }}>Mobile App Walkthrough</div>
-        <div style={{ fontFamily: 'Cormorant Garamond', fontSize: 'clamp(52px,8vw,96px)', fontWeight: 300, color: C.cream, lineHeight: 1 }}>
-          Harbour<br/><em style={{ color: C.accent }}>Barbers</em>
-        </div>
-        <div style={{ color: C.muted, fontSize: 15, marginTop: 24, lineHeight: 1.7, maxWidth: 400 }}>
-          Native iOS & Android app built with React Native. One codebase, two platforms, live data.
-        </div>
-      </div>
-      <div style={{ opacity: vis ? 1 : 0, transition: 'all .6s ease .4s', marginTop: 48, display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
-        {['Sign In','Book','Bookings','Rewards','Profile'].map(l => (
-          <div key={l} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 20, padding: '6px 16px', fontSize: 12, color: C.muted }}>{l}</div>
-        ))}
-      </div>
-    </div>
-  );
-}
+  const a = useEnter(active);
+  const b = useEnter(active, 300);
+  const c = useEnter(active, 600);
 
-function SlideSignIn({ active }) {
-  const vis = useIn(active);
-  return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'center', height: '100%', padding: '0 80px' }}>
-      <div style={{ opacity: vis ? 1 : 0, transform: vis ? 'none' : 'translateX(-20px)', transition: 'all .6s ease' }}>
-        <div style={{ fontSize: 11, letterSpacing: 3, textTransform: 'uppercase', color: C.gold, marginBottom: 16 }}>01 / Sign In</div>
-        <div style={{ fontFamily: 'Cormorant Garamond', fontSize: 46, fontWeight: 300, color: C.cream, lineHeight: 1.15, marginBottom: 20 }}>
-          Secure<br/><em style={{ color: C.accent }}>authentication</em>
+  const miniPhone = (
+    <div style={{ width:110, background:'#1a1a1c', borderRadius:20, padding:'5px 4px', boxShadow:'0 20px 60px rgba(0,0,0,.7), 0 0 0 1px rgba(255,255,255,.08)' }}>
+      <div style={{ borderRadius:16, overflow:'hidden', background:'#f7f5f0' }}>
+        <div style={{ background:'#18181a', padding:'14px 10px 8px', textAlign:'center' }}>
+          <div style={{ fontFamily:'Cormorant Garamond', color:'#fff', fontSize:10, letterSpacing:.5 }}>HARBOUR</div>
+          <div style={{ fontFamily:'Cormorant Garamond', color:T.accent, fontSize:10 }}>BARBERS</div>
         </div>
-        <div style={{ color: C.muted, fontSize: 14, lineHeight: 1.8, marginBottom: 28 }}>
-          Clean sign-in screen with sign-up toggle. Sessions persist — customers stay logged in between opens.
-        </div>
-        {['Email & password sign in','Create account directly in app','Session stored on device','Role-based routing after sign in'].map(t => (
-          <div key={t} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-            <div style={{ width: 16, height: 16, borderRadius: '50%', background: C.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <span style={{ color: '#fff', fontSize: 9, fontWeight: 700 }}>✓</span>
-            </div>
-            <span style={{ color: C.muted, fontSize: 13 }}>{t}</span>
-          </div>
-        ))}
-      </div>
-      <div style={{ opacity: vis ? 1 : 0, transform: vis ? 'none' : 'translateY(30px)', transition: 'all .7s ease .15s', display: 'flex', justifyContent: 'center' }}>
-        <Phone activeTab={null}>
-          <div style={{ flex: 1, background: '#f7f5f0', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '40px 20px 24px' }}>
-            <div style={{ fontFamily: 'Cormorant Garamond', fontSize: 36, fontWeight: 300, color: '#18181a', lineHeight: 1, marginBottom: 4 }}>HARBOUR</div>
-            <div style={{ fontFamily: 'Cormorant Garamond', fontSize: 36, fontWeight: 300, color: C.accent, lineHeight: 1, marginBottom: 32 }}>BARBERS</div>
-            {['Email address','Password'].map(p => (
-              <div key={p} style={{ background: '#fff', border: '1px solid #ccc7be', borderRadius: 8, padding: '11px 14px', marginBottom: 10, fontSize: 12, color: '#aaa' }}>{p}</div>
-            ))}
-            <div style={{ background: C.accent, color: '#fff', fontSize: 13, fontWeight: 600, padding: '12px', borderRadius: 8, textAlign: 'center', marginTop: 4 }}>Sign In</div>
-            <div style={{ textAlign: 'center', marginTop: 20, fontSize: 11, color: '#aaa' }}>
-              Don't have an account? <span style={{ color: C.accent }}>Sign up</span>
-            </div>
-          </div>
-        </Phone>
-      </div>
-    </div>
-  );
-}
-
-function SlideBook({ active }) {
-  const vis = useIn(active);
-  return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'center', height: '100%', padding: '0 80px' }}>
-      <div style={{ opacity: vis ? 1 : 0, transform: vis ? 'none' : 'translateY(30px)', transition: 'all .7s ease .1s', display: 'flex', justifyContent: 'center' }}>
-        <Phone activeTab={0}>
-          <div style={{ background: '#18181a', padding: '28px 14px 14px' }}>
-            <div style={{ color: '#fff', fontFamily: 'Cormorant Garamond', fontSize: 20, marginBottom: 2 }}>Book</div>
-            <div style={{ color: '#888', fontSize: 10 }}>Choose a service</div>
-          </div>
-          <div style={{ padding: '12px', flex: 1 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
-              {[['1','Service',true],['2','Barber',false],['3','Time',false],['4','Done',false]].map(([n,l,a]) => (
-                <div key={n} style={{ textAlign: 'center', flex: 1 }}>
-                  <div style={{ width: 18, height: 18, borderRadius: '50%', margin: '0 auto 3px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: a ? C.accent : '#eeebe4', fontSize: 8, fontWeight: 700, color: a ? '#fff' : '#aaa' }}>{n}</div>
-                  <div style={{ fontSize: 7, color: a ? C.accent : '#aaa', fontWeight: a ? 600 : 400 }}>{l}</div>
-                </div>
-              ))}
-            </div>
-            {[['Classic Haircut','30 min','$35'],['Haircut + Beard','45 min','$55'],['Hot Towel Shave','40 min','$45'],['Kids Cut','20 min','$25'],['Beard Trim','20 min','$20']].map(([n,d,p]) => (
-              <div key={n} style={{ background: '#fff', border: '1px solid #eeebe4', borderRadius: 8, padding: '10px', marginBottom: 6 }}>
-                <div style={{ fontSize: 12, fontWeight: 600, color: '#18181a' }}>{n}</div>
-                <div style={{ fontSize: 9, color: '#aaa', marginTop: 2 }}>{d} · <span style={{ color: C.accent, fontWeight: 600 }}>{p}</span></div>
-              </div>
-            ))}
-          </div>
-        </Phone>
-      </div>
-      <div style={{ opacity: vis ? 1 : 0, transform: vis ? 'none' : 'translateX(20px)', transition: 'all .6s ease' }}>
-        <div style={{ fontSize: 11, letterSpacing: 3, textTransform: 'uppercase', color: C.gold, marginBottom: 16 }}>02 / Book</div>
-        <div style={{ fontFamily: 'Cormorant Garamond', fontSize: 46, fontWeight: 300, color: C.cream, lineHeight: 1.15, marginBottom: 20 }}>
-          Book in<br/><em style={{ color: C.accent }}>4 steps</em>
-        </div>
-        <div style={{ color: C.muted, fontSize: 14, lineHeight: 1.8, marginBottom: 28 }}>
-          Service → Barber → Time → Confirm. The whole booking takes under a minute. Loyalty points are awarded automatically.
-        </div>
-        {['Browse services with live pricing','Pick any available barber','See open time slots for today','Instant booking confirmation'].map(t => (
-          <div key={t} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-            <div style={{ width: 16, height: 16, borderRadius: '50%', background: C.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <span style={{ color: '#fff', fontSize: 9, fontWeight: 700 }}>✓</span>
-            </div>
-            <span style={{ color: C.muted, fontSize: 13 }}>{t}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function SlideBookings({ active }) {
-  const vis = useIn(active);
-  return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'center', height: '100%', padding: '0 80px' }}>
-      <div style={{ opacity: vis ? 1 : 0, transform: vis ? 'none' : 'translateX(-20px)', transition: 'all .6s ease' }}>
-        <div style={{ fontSize: 11, letterSpacing: 3, textTransform: 'uppercase', color: C.gold, marginBottom: 16 }}>03 / Bookings</div>
-        <div style={{ fontFamily: 'Cormorant Garamond', fontSize: 46, fontWeight: 300, color: C.cream, lineHeight: 1.15, marginBottom: 20 }}>
-          All bookings<br/><em style={{ color: C.accent }}>at a glance</em>
-        </div>
-        <div style={{ color: C.muted, fontSize: 14, lineHeight: 1.8, marginBottom: 28 }}>
-          Upcoming and past appointments in one list. Pull down to refresh. Cancel with a single tap.
-        </div>
-        {['Upcoming & past in one view','Status badges (confirmed / pending)','Pull-to-refresh for live data','One-tap cancel with confirmation'].map(t => (
-          <div key={t} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-            <div style={{ width: 16, height: 16, borderRadius: '50%', background: C.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <span style={{ color: '#fff', fontSize: 9, fontWeight: 700 }}>✓</span>
-            </div>
-            <span style={{ color: C.muted, fontSize: 13 }}>{t}</span>
-          </div>
-        ))}
-      </div>
-      <div style={{ opacity: vis ? 1 : 0, transform: vis ? 'none' : 'translateY(30px)', transition: 'all .7s ease .15s', display: 'flex', justifyContent: 'center' }}>
-        <Phone activeTab={1}>
-          <div style={{ background: '#18181a', padding: '28px 14px 14px' }}>
-            <div style={{ color: '#fff', fontFamily: 'Cormorant Garamond', fontSize: 20, marginBottom: 2 }}>Bookings</div>
-            <div style={{ color: '#888', fontSize: 10 }}>Your appointments</div>
-          </div>
-          <div style={{ padding: 12, flex: 1 }}>
-            {[['Haircut + Beard','Marcus','Mon 23 Jun · 9:00 AM','confirmed','#e8f5ef','#2a6a4a'],['Classic Haircut','Daniel','Sat 28 Jun · 2:00 PM','pending','#e8eef5','#3d5a80'],['Hot Towel Shave','Marcus','Tue 1 Jul · 11:00 AM','confirmed','#e8f5ef','#2a6a4a'],['Classic Haircut','Ryan','Mon 9 Jun · 10:00 AM','completed','#f0f0f0','#6a6560']].map(([s,b,d,status,bg,col]) => (
-              <div key={d} style={{ background: '#fff', border: '1px solid #eeebe4', borderRadius: 8, padding: 10, marginBottom: 7 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: '#18181a' }}>{s}</div>
-                  <div style={{ background: bg, color: col, fontSize: 8, padding: '2px 7px', borderRadius: 10 }}>{status}</div>
-                </div>
-                <div style={{ fontSize: 9, color: '#aaa', marginTop: 3 }}>with {b}</div>
-                <div style={{ fontSize: 9, color: '#18181a', marginTop: 2 }}>{d}</div>
-                {['confirmed','pending'].includes(status) && <div style={{ fontSize: 9, color: C.accent, marginTop: 5 }}>Cancel</div>}
-              </div>
-            ))}
-          </div>
-        </Phone>
-      </div>
-    </div>
-  );
-}
-
-function SlideRewards({ active }) {
-  const vis = useIn(active);
-  return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'center', height: '100%', padding: '0 80px' }}>
-      <div style={{ opacity: vis ? 1 : 0, transform: vis ? 'none' : 'translateY(30px)', transition: 'all .7s ease .1s', display: 'flex', justifyContent: 'center' }}>
-        <Phone activeTab={2}>
-          <div style={{ background: '#18181a', padding: '28px 14px 14px' }}>
-            <div style={{ color: '#fff', fontFamily: 'Cormorant Garamond', fontSize: 20, marginBottom: 2 }}>Rewards</div>
-            <div style={{ color: '#888', fontSize: 10 }}>Your loyalty status</div>
-          </div>
-          <div style={{ padding: 12, flex: 1 }}>
-            <div style={{ background: '#fff', border: `2px solid ${C.accent}`, borderRadius: 10, padding: '14px', textAlign: 'center', marginBottom: 12 }}>
-              <div style={{ fontSize: 9, fontWeight: 700, color: C.accent, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>⭐ Gold Member</div>
-              <div style={{ fontFamily: 'Cormorant Garamond', fontSize: 48, fontWeight: 700, color: '#18181a', lineHeight: 1 }}>520</div>
-              <div style={{ fontSize: 9, color: '#aaa', marginBottom: 10 }}>loyalty points</div>
-              <div style={{ height: 5, background: '#eeebe4', borderRadius: 3, overflow: 'hidden', marginBottom: 4 }}>
-                <div style={{ width: '52%', height: '100%', background: C.accent, borderRadius: 3 }}/>
-              </div>
-              <div style={{ fontSize: 8, color: '#aaa' }}>480 pts to Platinum</div>
-            </div>
-            <div style={{ fontSize: 10, fontWeight: 600, color: '#18181a', marginBottom: 8 }}>History</div>
-            {[['Booked Haircut + Beard','23 Jun','+55'],['Booked Classic Haircut','15 Jun','+35'],['Booked Hot Towel Shave','2 Jun','+45'],['Booked Kids Cut','20 May','+25']].map(([d,dt,p]) => (
-              <div key={dt+d} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 7, marginBottom: 7, borderBottom: '1px solid #eeebe4' }}>
-                <div>
-                  <div style={{ fontSize: 9, color: '#18181a' }}>{d}</div>
-                  <div style={{ fontSize: 8, color: '#aaa' }}>{dt}</div>
-                </div>
-                <div style={{ fontSize: 12, fontWeight: 700, color: '#2a6a4a' }}>{p}</div>
-              </div>
-            ))}
-          </div>
-        </Phone>
-      </div>
-      <div style={{ opacity: vis ? 1 : 0, transform: vis ? 'none' : 'translateX(20px)', transition: 'all .6s ease' }}>
-        <div style={{ fontSize: 11, letterSpacing: 3, textTransform: 'uppercase', color: C.gold, marginBottom: 16 }}>04 / Rewards</div>
-        <div style={{ fontFamily: 'Cormorant Garamond', fontSize: 46, fontWeight: 300, color: C.cream, lineHeight: 1.15, marginBottom: 20 }}>
-          Loyalty that<br/><em style={{ color: C.accent }}>keeps them coming</em>
-        </div>
-        <div style={{ color: C.muted, fontSize: 14, lineHeight: 1.8, marginBottom: 28 }}>
-          Points earned on every visit. Four tiers keep customers engaged and coming back for more.
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 20 }}>
-          {[['🥉','Bronze','0 pts'],['🥈','Silver','200 pts'],['🥇','Gold','500 pts'],['💎','Platinum','1000 pts']].map(([icon,tier,pts]) => (
-            <div key={tier} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, padding: '10px 12px' }}>
-              <div style={{ fontSize: 16, marginBottom: 4 }}>{icon}</div>
-              <div style={{ color: C.cream, fontSize: 12, fontWeight: 600 }}>{tier}</div>
-              <div style={{ color: C.muted, fontSize: 11 }}>{pts}</div>
-            </div>
+        <div style={{ padding:'6px 8px' }}>
+          {['Classic Haircut · $35','Beard Trim · $20','Kids Cut · $25'].map(s=>(
+            <div key={s} style={{ background:'#fff', border:'1px solid #eeebe4', borderRadius:4, padding:'4px 6px', marginBottom:3, fontSize:7, color:'#333' }}>{s}</div>
           ))}
         </div>
       </div>
     </div>
   );
+
+  return (
+    <div style={{ position:'relative', display:'flex', alignItems:'center', justifyContent:'center', height:'100%', overflow:'hidden' }}>
+      <Noise/>
+      {/* radial bg */}
+      <div style={{ position:'absolute', inset:0, background:`radial-gradient(ellipse 60% 60% at 50% 50%, rgba(139,38,53,.12) 0%, transparent 70%)`, pointerEvents:'none' }}/>
+
+      <div style={{ display:'flex', alignItems:'center', gap:80, zIndex:1 }}>
+        {/* phones trio */}
+        <div style={{ display:'flex', alignItems:'flex-end', gap:-20, position:'relative' }}>
+          <div style={{ transform:'rotate(-8deg) translateY(20px)', opacity:b?1:0, transition:'all .7s ease .1s', transformOrigin:'bottom center', animation: b ? 'float 6s ease-in-out 1s infinite' : 'none' }}>{miniPhone}</div>
+          <div style={{ transform:'scale(1.15) translateY(-10px)', zIndex:2, opacity:b?1:0, transition:'all .7s ease .3s', animation: b ? 'float 6s ease-in-out infinite' : 'none' }}>{miniPhone}</div>
+          <div style={{ transform:'rotate(8deg) translateY(20px)', opacity:b?1:0, transition:'all .7s ease .5s', transformOrigin:'bottom center', animation: b ? 'float 6s ease-in-out .5s infinite' : 'none' }}>{miniPhone}</div>
+        </div>
+
+        {/* text */}
+        <div style={{ opacity:a?1:0, transform:a?'none':'translateY(24px)', transition:'all .7s ease' }}>
+          <div style={{ fontSize:10, letterSpacing:5, textTransform:'uppercase', color:T.gold, marginBottom:20, fontFamily:'DM Sans' }}>
+            Mobile App Walkthrough
+          </div>
+          <div style={{ fontFamily:'Cormorant Garamond', fontWeight:300, lineHeight:1, color:T.cream, fontSize:'clamp(60px,7vw,88px)' }}>
+            Harbour<br/><em style={{ color:T.accent }}>Barbers</em>
+          </div>
+          <div style={{ width:50, height:1, background:T.accentL, margin:'28px 0', opacity:.7 }}/>
+          <div style={{ color:T.muted, fontSize:14, lineHeight:1.8, maxWidth:360 }}>
+            A native iOS & Android booking app. Same live backend as the website. Book, manage, earn rewards.
+          </div>
+          <div style={{ opacity:c?1:0, transition:'all .5s ease', display:'flex', gap:8, marginTop:32, flexWrap:'wrap' }}>
+            {['Sign In','Book','Bookings','Rewards','Profile'].map(l=>(
+              <div key={l} style={{ background:T.surface, border:`1px solid ${T.border}`, borderRadius:20, padding:'5px 14px', fontSize:11, color:T.muted }}>
+                {l}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
+/* ═══════════════ SLIDE 2 — SIGN IN ═══════════════ */
+function SlideSignIn({ active }) {
+  const a = useEnter(active);
+  const b = useEnter(active, 200);
+  return (
+    <div style={{ position:'relative', display:'grid', gridTemplateColumns:'1fr 1fr', height:'100%', overflow:'hidden' }}>
+      <Noise/>
+      <div style={{ position:'absolute', inset:0, background:'radial-gradient(ellipse 50% 80% at 20% 50%, rgba(139,38,53,.08) 0%, transparent 60%)', pointerEvents:'none' }}/>
+
+      {/* LEFT — copy */}
+      <div style={{ display:'flex', flexDirection:'column', justifyContent:'center', padding:'0 60px 0 72px', position:'relative', zIndex:1 }}>
+        <Num n="01" active={active}/>
+        <div style={{ position:'relative' }}>
+          <div style={{ fontSize:10, letterSpacing:4, textTransform:'uppercase', color:T.gold, marginBottom:16, opacity:a?1:0, transition:'all .5s ease', fontFamily:'DM Sans' }}>Authentication</div>
+          <Line active={active}/>
+          <div style={{ fontFamily:'Cormorant Garamond', fontSize:'clamp(38px,4vw,54px)', fontWeight:300, color:T.cream, lineHeight:1.1, marginBottom:24, opacity:a?1:0, transform:a?'none':'translateY(20px)', transition:'all .6s ease .1s' }}>
+            Secure sign in<br/><em style={{ color:T.accent }}>& sign up</em>
+          </div>
+          <div style={{ opacity:b?1:0, transition:'all .5s ease .1s' }}>
+            <Check>Email & password authentication</Check>
+            <Check>Sign up directly inside the app</Check>
+            <Check>Session persists between opens</Check>
+            <Check>Auto-redirects based on account role</Check>
+          </div>
+        </div>
+      </div>
+
+      {/* RIGHT — phone */}
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'center', padding:'32px 60px', zIndex:1 }}>
+        <div style={{ opacity:b?1:0, transform:b?'none':'translateY(40px)', transition:'all .7s ease .15s', animation:b?'float 7s ease-in-out infinite':'' }}>
+          <Phone glow={T.accent}>
+            <StatusBar dark={false}/>
+            <div style={{ flex:1, display:'flex', flexDirection:'column', justifyContent:'center', padding:'20px 22px 32px' }}>
+              <div style={{ textAlign:'center', marginBottom:36 }}>
+                <div style={{ fontFamily:'Cormorant Garamond', fontSize:32, fontWeight:300, color:'#18181a', lineHeight:1 }}>HARBOUR</div>
+                <div style={{ fontFamily:'Cormorant Garamond', fontSize:32, fontWeight:300, color:T.accent, lineHeight:1, marginBottom:8 }}>BARBERS</div>
+                <div style={{ width:32, height:1, background:T.accent, margin:'0 auto', opacity:.4 }}/>
+              </div>
+              <div style={{ fontSize:11, color:'#6a6560', textAlign:'center', marginBottom:24 }}>Sign in to your account</div>
+              {['Email address','Password'].map((p,i)=>(
+                <div key={p} style={{ background:'#f0ede8', borderRadius:10, padding:'13px 16px', marginBottom:10, fontSize:12, color:'#aaa9a6', border:'1px solid #e8e4de' }}>{p}</div>
+              ))}
+              <div style={{ background:T.accent, color:'#fff', fontSize:13, fontWeight:600, padding:'14px', borderRadius:10, textAlign:'center', marginTop:6, letterSpacing:.3 }}>
+                Sign In
+              </div>
+              <div style={{ textAlign:'center', marginTop:20, fontSize:11, color:'#aaa' }}>
+                No account? <span style={{ color:T.accent, fontWeight:500 }}>Create one</span>
+              </div>
+            </div>
+          </Phone>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════ SLIDE 3 — BOOK ═══════════════ */
+function SlideBook({ active }) {
+  const a = useEnter(active);
+  const b = useEnter(active, 200);
+  return (
+    <div style={{ position:'relative', display:'grid', gridTemplateColumns:'1fr 1fr', height:'100%', overflow:'hidden' }}>
+      <Noise/>
+      <div style={{ position:'absolute', inset:0, background:'radial-gradient(ellipse 50% 80% at 80% 50%, rgba(139,38,53,.08) 0%, transparent 60%)', pointerEvents:'none' }}/>
+
+      {/* LEFT — phone */}
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'center', padding:'32px 40px 32px 72px', zIndex:1 }}>
+        <div style={{ opacity:b?1:0, transform:b?'none':'translateY(40px)', transition:'all .7s ease .15s', animation:b?'float 7s ease-in-out .5s infinite':'' }}>
+          <Phone glow={T.accent}>
+            <StatusBar dark={true}/>
+            <div style={{ background:'#18181a', padding:'8px 16px 14px', marginTop:2 }}>
+              <div style={{ display:'flex', gap:4, marginBottom:12 }}>
+                {[['1','Service',true],['2','Barber',false],['3','Time',false],['4','✓',false]].map(([n,l,on])=>(
+                  <div key={n} style={{ flex:1, textAlign:'center' }}>
+                    <div style={{ width:20, height:20, borderRadius:'50%', margin:'0 auto 4px', display:'flex', alignItems:'center', justifyContent:'center', background:on?T.accent:'rgba(255,255,255,.08)', fontSize:9, fontWeight:700, color:on?'#fff':'rgba(255,255,255,.3)' }}>{n}</div>
+                    <div style={{ fontSize:7, color:on?T.cream:'rgba(255,255,255,.25)', fontWeight:on?500:400 }}>{l}</div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ color:'#fff', fontFamily:'Cormorant Garamond', fontSize:18 }}>Choose a service</div>
+            </div>
+            <div style={{ flex:1, padding:'12px', overflow:'hidden' }}>
+              {[['✂ Classic Haircut','The essential cut','30 min','$35'],['✂ Haircut + Beard','Cut and full beard groom','45 min','$55'],['✂ Hot Towel Shave','Traditional wet shave','40 min','$45'],['✂ Kids Cut','For under 12s','20 min','$25'],['✂ Beard Trim','Shape & define','20 min','$20']].map(([n,d,dur,p])=>(
+                <div key={n} style={{ background:'#fff', border:'1px solid #eeebe4', borderRadius:10, padding:'10px 12px', marginBottom:7, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                  <div>
+                    <div style={{ fontSize:11, fontWeight:600, color:'#18181a' }}>{n}</div>
+                    <div style={{ fontSize:9, color:'#aaa', marginTop:1 }}>{d}</div>
+                    <div style={{ fontSize:9, color:'#888', marginTop:1 }}>{dur}</div>
+                  </div>
+                  <div style={{ fontFamily:'Cormorant Garamond', fontSize:18, fontWeight:600, color:T.accent }}>{p}</div>
+                </div>
+              ))}
+            </div>
+            <TabBar active={0}/>
+          </Phone>
+        </div>
+      </div>
+
+      {/* RIGHT — copy */}
+      <div style={{ display:'flex', flexDirection:'column', justifyContent:'center', padding:'0 72px 0 40px', position:'relative', zIndex:1 }}>
+        <Num n="02" active={active}/>
+        <div style={{ position:'relative' }}>
+          <div style={{ fontSize:10, letterSpacing:4, textTransform:'uppercase', color:T.gold, marginBottom:16, opacity:a?1:0, transition:'all .5s ease', fontFamily:'DM Sans' }}>Booking Flow</div>
+          <Line active={active}/>
+          <div style={{ fontFamily:'Cormorant Garamond', fontSize:'clamp(38px,4vw,54px)', fontWeight:300, color:T.cream, lineHeight:1.1, marginBottom:24, opacity:a?1:0, transform:a?'none':'translateY(20px)', transition:'all .6s ease .1s' }}>
+            Book in<br/><em style={{ color:T.accent }}>4 simple steps</em>
+          </div>
+          <div style={{ opacity:b?1:0, transition:'all .5s ease .1s' }}>
+            {[['1','Service','Browse all services with live pricing'],['2','Barber','Choose from available barbers'],['3','Time','See open slots for today'],['4','Confirm','Booking confirmed instantly']].map(([n,t,d])=>(
+              <div key={n} style={{ display:'flex', gap:14, marginBottom:14, alignItems:'flex-start' }}>
+                <div style={{ width:28, height:28, borderRadius:'50%', background:T.accent, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, fontWeight:700, color:'#fff', fontSize:11 }}>{n}</div>
+                <div>
+                  <div style={{ color:T.cream, fontSize:13, fontWeight:500, marginBottom:2 }}>{t}</div>
+                  <div style={{ color:T.muted, fontSize:12 }}>{d}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════ SLIDE 4 — BOOKINGS ═══════════════ */
+function SlideBookings({ active }) {
+  const a = useEnter(active);
+  const b = useEnter(active, 200);
+  return (
+    <div style={{ position:'relative', display:'grid', gridTemplateColumns:'1fr 1fr', height:'100%', overflow:'hidden' }}>
+      <Noise/>
+      <div style={{ position:'absolute', inset:0, background:'radial-gradient(ellipse 50% 80% at 20% 50%, rgba(139,38,53,.08) 0%, transparent 60%)', pointerEvents:'none' }}/>
+
+      {/* LEFT — copy */}
+      <div style={{ display:'flex', flexDirection:'column', justifyContent:'center', padding:'0 60px 0 72px', position:'relative', zIndex:1 }}>
+        <Num n="03" active={active}/>
+        <div style={{ position:'relative' }}>
+          <div style={{ fontSize:10, letterSpacing:4, textTransform:'uppercase', color:T.gold, marginBottom:16, opacity:a?1:0, transition:'all .5s ease', fontFamily:'DM Sans' }}>Appointment History</div>
+          <Line active={active}/>
+          <div style={{ fontFamily:'Cormorant Garamond', fontSize:'clamp(38px,4vw,54px)', fontWeight:300, color:T.cream, lineHeight:1.1, marginBottom:24, opacity:a?1:0, transform:a?'none':'translateY(20px)', transition:'all .6s ease .1s' }}>
+            All bookings<br/><em style={{ color:T.accent }}>in one place</em>
+          </div>
+          <div style={{ opacity:b?1:0, transition:'all .5s ease .1s' }}>
+            <Check>Upcoming & past in a single list</Check>
+            <Check>Live status badges per appointment</Check>
+            <Check>Pull-to-refresh for live data</Check>
+            <Check>Cancel with a single tap</Check>
+          </div>
+        </div>
+      </div>
+
+      {/* RIGHT — phone */}
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'center', padding:'32px 72px 32px 40px', zIndex:1 }}>
+        <div style={{ opacity:b?1:0, transform:b?'none':'translateY(40px)', transition:'all .7s ease .15s', animation:b?'float 7s ease-in-out 1s infinite':'' }}>
+          <Phone glow={T.accent}>
+            <StatusBar dark={true}/>
+            <div style={{ background:'#18181a', padding:'8px 16px 14px', marginTop:2 }}>
+              <div style={{ color:'rgba(255,255,255,.5)', fontSize:9, marginBottom:2 }}>Pull down to refresh</div>
+              <div style={{ color:'#fff', fontFamily:'Cormorant Garamond', fontSize:18 }}>My Bookings</div>
+            </div>
+            <div style={{ flex:1, padding:'12px' }}>
+              {[['Haircut + Beard','with Marcus','Mon 23 Jun · 9:00 AM','confirmed','#eaf5ee','#2a6a4a'],
+                ['Classic Haircut','with Daniel','Sat 28 Jun · 2:00 PM','pending','#e8eef5','#3d5a80'],
+                ['Hot Towel Shave','with Marcus','Tue 1 Jul · 11:00','confirmed','#eaf5ee','#2a6a4a'],
+                ['Classic Haircut','with Ryan','Mon 9 Jun · 10:00','completed','#f0f0f0','#888']
+              ].map(([s,b,d,status,bg,col])=>(
+                <div key={d} style={{ background:'#fff', border:'1px solid #eeebe4', borderRadius:10, padding:'10px 12px', marginBottom:7 }}>
+                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
+                    <div style={{ fontSize:11, fontWeight:600, color:'#18181a' }}>{s}</div>
+                    <div style={{ background:bg, color:col, fontSize:8, padding:'3px 8px', borderRadius:20, fontWeight:500 }}>{status}</div>
+                  </div>
+                  <div style={{ fontSize:9, color:'#aaa', marginTop:3 }}>{b}</div>
+                  <div style={{ fontSize:9, color:'#555', marginTop:2 }}>{d}</div>
+                  {['confirmed','pending'].includes(status)&&<div style={{ fontSize:9, color:T.accent, marginTop:6, fontWeight:500 }}>Cancel appointment</div>}
+                </div>
+              ))}
+            </div>
+            <TabBar active={1}/>
+          </Phone>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════ SLIDE 5 — REWARDS ═══════════════ */
+function SlideRewards({ active }) {
+  const a = useEnter(active);
+  const b = useEnter(active, 200);
+  return (
+    <div style={{ position:'relative', display:'grid', gridTemplateColumns:'1fr 1fr', height:'100%', overflow:'hidden' }}>
+      <Noise/>
+      <div style={{ position:'absolute', inset:0, background:'radial-gradient(ellipse 50% 80% at 80% 50%, rgba(201,169,110,.06) 0%, transparent 60%)', pointerEvents:'none' }}/>
+
+      {/* LEFT — phone */}
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'center', padding:'32px 40px 32px 72px', zIndex:1 }}>
+        <div style={{ opacity:b?1:0, transform:b?'none':'translateY(40px)', transition:'all .7s ease .15s', animation:b?'float 7s ease-in-out 2s infinite':'' }}>
+          <Phone glow={T.gold}>
+            <StatusBar dark={false}/>
+            <div style={{ background:'linear-gradient(150deg,#18181a 0%,#2a1a1e 100%)', padding:'8px 16px 14px', marginTop:2 }}>
+              <div style={{ color:'rgba(255,255,255,.4)', fontSize:9, marginBottom:2 }}>Your membership</div>
+              <div style={{ color:'#fff', fontFamily:'Cormorant Garamond', fontSize:18 }}>Rewards</div>
+            </div>
+            <div style={{ flex:1, padding:'12px' }}>
+              {/* tier card */}
+              <div style={{ background:`linear-gradient(135deg,#fff 0%,#fdf9f5 100%)`, border:`2px solid ${T.accent}`, borderRadius:14, padding:'16px', textAlign:'center', marginBottom:12, boxShadow:'0 4px 20px rgba(139,38,53,.12)' }}>
+                <div style={{ fontSize:10, fontWeight:700, color:T.accent, textTransform:'uppercase', letterSpacing:2, marginBottom:6 }}>⭐ Gold Member</div>
+                <div style={{ fontFamily:'Cormorant Garamond', fontSize:52, fontWeight:600, color:'#18181a', lineHeight:1 }}>520</div>
+                <div style={{ fontSize:10, color:'#aaa', marginBottom:12, marginTop:2 }}>loyalty points</div>
+                {/* progress bar */}
+                <div style={{ position:'relative', height:6, background:'#eeebe4', borderRadius:3, overflow:'hidden', marginBottom:6 }}>
+                  <div style={{ position:'absolute', left:0, top:0, bottom:0, width:'52%', background:`linear-gradient(90deg,${T.accent},${T.accentL})`, borderRadius:3 }}/>
+                </div>
+                <div style={{ fontSize:9, color:'#aaa' }}>480 more points to <strong style={{ color:'#6a9ab0' }}>Platinum</strong></div>
+              </div>
+              {/* tiers row */}
+              <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:4, marginBottom:10 }}>
+                {[['🥉','Bronze','0'],['🥈','Silver','200'],['🥇','Gold','500'],['💎','Plat','1k']].map(([icon,t,p])=>(
+                  <div key={t} style={{ background:'#fff', border:'1px solid #eeebe4', borderRadius:8, padding:'6px 4px', textAlign:'center' }}>
+                    <div style={{ fontSize:13 }}>{icon}</div>
+                    <div style={{ fontSize:7, color:'#555', fontWeight:600 }}>{t}</div>
+                    <div style={{ fontSize:7, color:'#aaa' }}>{p}pts</div>
+                  </div>
+                ))}
+              </div>
+              {/* history */}
+              {[['Haircut + Beard','23 Jun','+55'],['Classic Haircut','15 Jun','+35'],['Hot Towel Shave','2 Jun','+45']].map(([d,dt,p])=>(
+                <div key={dt} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'7px 0', borderBottom:'1px solid #f0ede8' }}>
+                  <div>
+                    <div style={{ fontSize:10, color:'#18181a' }}>{d}</div>
+                    <div style={{ fontSize:8, color:'#aaa' }}>{dt}</div>
+                  </div>
+                  <div style={{ fontFamily:'Cormorant Garamond', fontSize:16, fontWeight:600, color:'#2a6a4a' }}>{p}</div>
+                </div>
+              ))}
+            </div>
+            <TabBar active={2}/>
+          </Phone>
+        </div>
+      </div>
+
+      {/* RIGHT — copy */}
+      <div style={{ display:'flex', flexDirection:'column', justifyContent:'center', padding:'0 72px 0 40px', position:'relative', zIndex:1 }}>
+        <Num n="04" active={active}/>
+        <div style={{ position:'relative' }}>
+          <div style={{ fontSize:10, letterSpacing:4, textTransform:'uppercase', color:T.gold, marginBottom:16, opacity:a?1:0, transition:'all .5s ease', fontFamily:'DM Sans' }}>Loyalty Programme</div>
+          <Line active={active}/>
+          <div style={{ fontFamily:'Cormorant Garamond', fontSize:'clamp(38px,4vw,54px)', fontWeight:300, color:T.cream, lineHeight:1.1, marginBottom:24, opacity:a?1:0, transform:a?'none':'translateY(20px)', transition:'all .6s ease .1s' }}>
+            Earn rewards<br/><em style={{ color:T.accent }}>every visit</em>
+          </div>
+          <div style={{ opacity:b?1:0, transition:'all .5s ease .1s', marginBottom:28 }}>
+            <Check>Points earned automatically on every booking</Check>
+            <Check>Four tiers: Bronze, Silver, Gold, Platinum</Check>
+            <Check>Visual progress bar to next tier</Check>
+            <Check>Full transaction history</Check>
+          </div>
+          <div style={{ opacity:b?1:0, transition:'all .5s ease .2s', display:'flex', gap:10 }}>
+            {[['$1 spent','= 1 point'],['200 pts','Silver'],['500 pts','Gold'],['1000 pts','Platinum']].map(([t,d])=>(
+              <div key={t} style={{ background:T.surface, border:`1px solid ${T.border}`, borderRadius:8, padding:'10px', textAlign:'center', flex:1 }}>
+                <div style={{ color:T.cream, fontSize:11, fontWeight:500 }}>{t}</div>
+                <div style={{ color:T.gold, fontSize:10, marginTop:2 }}>{d}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════ SLIDE 6 — PROFILE ═══════════════ */
 function SlideProfile({ active }) {
-  const vis = useIn(active);
+  const a = useEnter(active);
+  const b = useEnter(active, 200);
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'center', height: '100%', padding: '0 80px' }}>
-      <div style={{ opacity: vis ? 1 : 0, transform: vis ? 'none' : 'translateX(-20px)', transition: 'all .6s ease' }}>
-        <div style={{ fontSize: 11, letterSpacing: 3, textTransform: 'uppercase', color: C.gold, marginBottom: 16 }}>05 / Profile</div>
-        <div style={{ fontFamily: 'Cormorant Garamond', fontSize: 46, fontWeight: 300, color: C.cream, lineHeight: 1.15, marginBottom: 20 }}>
-          Account<br/><em style={{ color: C.accent }}>management</em>
-        </div>
-        <div style={{ color: C.muted, fontSize: 14, lineHeight: 1.8, marginBottom: 28 }}>
-          Customers update their details and see their membership status. Sign out with one tap.
-        </div>
-        {['Edit full name and phone number','Membership tier & points visible','Simple, clean one-page layout','Sign out with confirmation'].map(t => (
-          <div key={t} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-            <div style={{ width: 16, height: 16, borderRadius: '50%', background: C.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <span style={{ color: '#fff', fontSize: 9, fontWeight: 700 }}>✓</span>
-            </div>
-            <span style={{ color: C.muted, fontSize: 13 }}>{t}</span>
+    <div style={{ position:'relative', display:'grid', gridTemplateColumns:'1fr 1fr', height:'100%', overflow:'hidden' }}>
+      <Noise/>
+      <div style={{ position:'absolute', inset:0, background:'radial-gradient(ellipse 50% 80% at 20% 50%, rgba(139,38,53,.08) 0%, transparent 60%)', pointerEvents:'none' }}/>
+
+      {/* LEFT — copy */}
+      <div style={{ display:'flex', flexDirection:'column', justifyContent:'center', padding:'0 60px 0 72px', position:'relative', zIndex:1 }}>
+        <Num n="05" active={active}/>
+        <div style={{ position:'relative' }}>
+          <div style={{ fontSize:10, letterSpacing:4, textTransform:'uppercase', color:T.gold, marginBottom:16, opacity:a?1:0, transition:'all .5s ease', fontFamily:'DM Sans' }}>Account</div>
+          <Line active={active}/>
+          <div style={{ fontFamily:'Cormorant Garamond', fontSize:'clamp(38px,4vw,54px)', fontWeight:300, color:T.cream, lineHeight:1.1, marginBottom:24, opacity:a?1:0, transform:a?'none':'translateY(20px)', transition:'all .6s ease .1s' }}>
+            Personal<br/><em style={{ color:T.accent }}>profile</em>
           </div>
-        ))}
+          <div style={{ opacity:b?1:0, transition:'all .5s ease .1s' }}>
+            <Check>View name, email & phone number</Check>
+            <Check>Membership tier prominently displayed</Check>
+            <Check>Edit details with live save</Check>
+            <Check>One-tap sign out</Check>
+          </div>
+        </div>
       </div>
-      <div style={{ opacity: vis ? 1 : 0, transform: vis ? 'none' : 'translateY(30px)', transition: 'all .7s ease .15s', display: 'flex', justifyContent: 'center' }}>
-        <Phone activeTab={3}>
-          <div style={{ background: '#18181a', padding: '28px 14px 14px' }}>
-            <div style={{ color: '#fff', fontFamily: 'Cormorant Garamond', fontSize: 20 }}>Profile</div>
-          </div>
-          <div style={{ padding: '16px 14px', flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <div style={{ width: 56, height: 56, borderRadius: '50%', background: C.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 8 }}>
-              <span style={{ color: '#fff', fontSize: 24, fontWeight: 700 }}>J</span>
+
+      {/* RIGHT — phone */}
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'center', padding:'32px 72px 32px 40px', zIndex:1 }}>
+        <div style={{ opacity:b?1:0, transform:b?'none':'translateY(40px)', transition:'all .7s ease .15s', animation:b?'float 7s ease-in-out 3s infinite':'' }}>
+          <Phone glow={T.accent}>
+            <StatusBar dark={false}/>
+            <div style={{ background:'linear-gradient(150deg,#18181a 0%,#2a1a1e 100%)', padding:'8px 16px 14px', marginTop:2 }}>
+              <div style={{ color:'#fff', fontFamily:'Cormorant Garamond', fontSize:18 }}>Profile</div>
             </div>
-            <div style={{ fontSize: 14, fontWeight: 600, color: '#18181a', marginBottom: 2 }}>James Kwame</div>
-            <div style={{ fontSize: 10, color: '#aaa', marginBottom: 4 }}>james@email.com</div>
-            <div style={{ fontSize: 10, color: C.accent, fontWeight: 600, marginBottom: 16 }}>Gold · 520 pts</div>
-            <div style={{ width: '100%', marginBottom: 10 }}>
-              <div style={{ fontSize: 9, color: '#aaa', textTransform: 'uppercase', letterSpacing: .5, marginBottom: 4 }}>Full Name</div>
-              <div style={{ background: '#fff', border: '1px solid #ccc7be', borderRadius: 7, padding: '9px 12px', fontSize: 11, color: '#18181a' }}>James Kwame</div>
+            <div style={{ flex:1, padding:'14px', display:'flex', flexDirection:'column', alignItems:'center' }}>
+              <div style={{ width:64, height:64, borderRadius:'50%', background:`linear-gradient(135deg,${T.accentL},${T.accent})`, display:'flex', alignItems:'center', justifyContent:'center', marginBottom:10, marginTop:8, boxShadow:`0 4px 20px rgba(139,38,53,.35)` }}>
+                <span style={{ color:'#fff', fontSize:26, fontWeight:700, fontFamily:'Cormorant Garamond' }}>J</span>
+              </div>
+              <div style={{ fontSize:15, fontWeight:600, color:'#18181a', marginBottom:2, fontFamily:'Cormorant Garamond' }}>James Kwame</div>
+              <div style={{ fontSize:10, color:'#aaa', marginBottom:4 }}>james@email.com</div>
+              <div style={{ background:`rgba(139,38,53,.08)`, border:`1px solid rgba(139,38,53,.2)`, borderRadius:20, padding:'4px 14px', fontSize:10, color:T.accent, fontWeight:600, marginBottom:20 }}>
+                ⭐ Gold · 520 pts
+              </div>
+              <div style={{ width:'100%', marginBottom:10 }}>
+                <div style={{ fontSize:9, color:'#aaa', letterSpacing:.5, textTransform:'uppercase', marginBottom:5 }}>Full Name</div>
+                <div style={{ background:'#f0ede8', border:'1px solid #e0dbd4', borderRadius:9, padding:'11px 14px', fontSize:12, color:'#18181a' }}>James Kwame</div>
+              </div>
+              <div style={{ width:'100%', marginBottom:18 }}>
+                <div style={{ fontSize:9, color:'#aaa', letterSpacing:.5, textTransform:'uppercase', marginBottom:5 }}>Phone Number</div>
+                <div style={{ background:'#f0ede8', border:'1px solid #e0dbd4', borderRadius:9, padding:'11px 14px', fontSize:12, color:'#18181a' }}>+44 7700 900123</div>
+              </div>
+              <div style={{ width:'100%', background:`linear-gradient(90deg,${T.accent},${T.accentL})`, borderRadius:10, padding:'12px', textAlign:'center', marginBottom:10, boxShadow:`0 4px 12px rgba(139,38,53,.3)` }}>
+                <span style={{ color:'#fff', fontSize:13, fontWeight:600 }}>Save Changes</span>
+              </div>
+              <div style={{ fontSize:11, color:'#bbb', fontWeight:400 }}>Sign Out</div>
             </div>
-            <div style={{ width: '100%', marginBottom: 14 }}>
-              <div style={{ fontSize: 9, color: '#aaa', textTransform: 'uppercase', letterSpacing: .5, marginBottom: 4 }}>Phone</div>
-              <div style={{ background: '#fff', border: '1px solid #ccc7be', borderRadius: 7, padding: '9px 12px', fontSize: 11, color: '#18181a' }}>+44 7700 900123</div>
-            </div>
-            <div style={{ width: '100%', background: C.accent, borderRadius: 8, padding: '10px', textAlign: 'center', marginBottom: 8 }}>
-              <span style={{ color: '#fff', fontSize: 12, fontWeight: 600 }}>Save Changes</span>
-            </div>
-            <div style={{ fontSize: 11, color: '#aaa' }}>Sign Out</div>
-          </div>
-        </Phone>
+            <TabBar active={3}/>
+          </Phone>
+        </div>
       </div>
     </div>
   );
 }
 
+/* ═══════════════ SLIDE 7 — CLOSE ═══════════════ */
 function SlideClose({ active }) {
-  const vis = useIn(active);
+  const a = useEnter(active);
+  const b = useEnter(active, 300);
+  const c = useEnter(active, 600);
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', textAlign: 'center', padding: '0 40px' }}>
-      <div style={{ opacity: vis ? 1 : 0, transform: vis ? 'none' : 'translateY(24px)', transition: 'all .6s ease' }}>
-        <div style={{ fontSize: 11, letterSpacing: 4, textTransform: 'uppercase', color: C.gold, marginBottom: 20 }}>Available on</div>
-        <div style={{ fontFamily: 'Cormorant Garamond', fontSize: 'clamp(40px,6vw,72px)', fontWeight: 300, color: C.cream, lineHeight: 1.1 }}>
-          iOS <em style={{ color: C.accent }}>&</em> Android
-        </div>
-        <div style={{ color: C.muted, fontSize: 15, marginTop: 16, maxWidth: 440, lineHeight: 1.7 }}>
-          Built with React Native + Expo. One codebase deployed to both platforms. All data powered by the same live backend as the website.
-        </div>
-      </div>
-      <div style={{ opacity: vis ? 1 : 0, transition: 'all .6s ease .4s', marginTop: 48, display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 14, maxWidth: 720, width: '100%' }}>
-        {[['✂️','Book','4-step booking'],['📅','Bookings','Manage appointments'],['⭐','Rewards','Points & tiers'],['👤','Profile','Edit details'],['🔔','Emails','Confirmations']].map(([icon,t,d]) => (
-          <div key={t} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: '16px 12px', textAlign: 'center' }}>
-            <div style={{ fontSize: 22, marginBottom: 6 }}>{icon}</div>
-            <div style={{ color: C.cream, fontSize: 12, fontWeight: 600, marginBottom: 4 }}>{t}</div>
-            <div style={{ color: C.muted, fontSize: 10, lineHeight: 1.5 }}>{d}</div>
+    <div style={{ position:'relative', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', height:'100%', textAlign:'center', overflow:'hidden', padding:'0 40px' }}>
+      <Noise/>
+      <div style={{ position:'absolute', inset:0, background:'radial-gradient(ellipse 70% 60% at 50% 50%, rgba(139,38,53,.1) 0%, transparent 70%)', pointerEvents:'none' }}/>
+
+      <div style={{ position:'relative', zIndex:1 }}>
+        <div style={{ opacity:a?1:0, transform:a?'none':'translateY(20px)', transition:'all .6s ease' }}>
+          <div style={{ fontSize:10, letterSpacing:5, textTransform:'uppercase', color:T.gold, marginBottom:20, fontFamily:'DM Sans' }}>Available on</div>
+          <div style={{ fontFamily:'Cormorant Garamond', fontWeight:300, fontSize:'clamp(44px,6vw,76px)', color:T.cream, lineHeight:1.05 }}>
+            iOS <em style={{ color:T.accent }}>&</em> Android
           </div>
-        ))}
+          <div style={{ color:T.muted, fontSize:15, marginTop:18, lineHeight:1.75, maxWidth:520 }}>
+            Built with React Native + Expo. One codebase, two platforms. All data synced live with the website.
+          </div>
+        </div>
+
+        <div style={{ opacity:b?1:0, transition:'all .6s ease', marginTop:52, display:'flex', gap:20, justifyContent:'center' }}>
+          {[['✂️','Book','4-step flow'],['📅','Bookings','Manage & cancel'],['⭐','Rewards','Points & tiers'],['👤','Profile','Edit details'],['📧','Email','Confirmations sent']].map(([icon,t,d],i)=>(
+            <div key={t} style={{
+              background:T.surface, border:`1px solid ${T.border}`, borderRadius:14, padding:'20px 16px', textAlign:'center', width:120,
+              opacity:b?1:0, transform:b?'none':'translateY(20px)',
+              transition:`all .5s ease ${i*.07}s`,
+            }}>
+              <div style={{ fontSize:26, marginBottom:10 }}>{icon}</div>
+              <div style={{ color:T.cream, fontSize:13, fontWeight:500, marginBottom:4 }}>{t}</div>
+              <div style={{ color:T.muted, fontSize:11, lineHeight:1.5 }}>{d}</div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ opacity:c?1:0, transition:'all .5s ease', marginTop:36 }}>
+          <div style={{ display:'inline-flex', gap:10, alignItems:'center', background:T.surface, border:`1px solid ${T.border}`, borderRadius:24, padding:'10px 24px' }}>
+            <span style={{ color:T.muted, fontSize:12 }}>Backend:</span>
+            <span style={{ color:T.cream, fontSize:12, fontWeight:500 }}>harbour-barbers.vercel.app</span>
+          </div>
+        </div>
       </div>
     </div>
   );
 }
 
+/* ═══════════════ APP SHELL ═══════════════ */
 const SLIDES = [SlideIntro, SlideSignIn, SlideBook, SlideBookings, SlideRewards, SlideProfile, SlideClose];
-const TITLES = ['Intro','Sign In','Book','Bookings','Rewards','Profile',''];
+const LABELS = ['Intro','Sign In','Book','Bookings','Rewards','Profile',''];
 
 function App() {
   const [cur, setCur] = useState(0);
+  const [entering, setEntering] = useState(false);
 
   function go(n) {
-    if (n >= 0 && n < SLIDES.length) setCur(n);
+    if (n < 0 || n >= SLIDES.length || entering) return;
+    setEntering(true);
+    setCur(n);
+    setTimeout(() => setEntering(false), 400);
   }
 
   useEffect(() => {
-    const h = (e) => {
-      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') go(cur + 1);
-      if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   go(cur - 1);
+    const h = e => {
+      if (e.key==='ArrowRight'||e.key==='ArrowDown') go(cur+1);
+      if (e.key==='ArrowLeft' ||e.key==='ArrowUp')   go(cur-1);
     };
     window.addEventListener('keydown', h);
     return () => window.removeEventListener('keydown', h);
@@ -376,32 +632,55 @@ function App() {
   const Slide = SLIDES[cur];
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: C.bg, color: C.cream, display: 'flex', flexDirection: 'column' }} onClick={() => go(cur + 1)}>
-      <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
-        <div style={{ position: 'absolute', inset: 0 }}>
-          <Slide active={true} />
-        </div>
+    <div
+      style={{ position:'fixed', inset:0, background:T.bg, color:T.cream, display:'flex', flexDirection:'column', userSelect:'none' }}
+      onClick={() => go(cur+1)}
+    >
+      {/* slide */}
+      <div style={{ flex:1, position:'relative', overflow:'hidden' }}>
+        <Slide active={true}/>
       </div>
-      <div style={{ height: 52, borderTop: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', padding: '0 32px', gap: 20, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
-        <div style={{ fontFamily: 'Cormorant Garamond', fontSize: 14, color: C.muted, minWidth: 80 }}>
-          {TITLES[cur] || 'Harbour Barbers'}
+
+      {/* playback bar */}
+      <div
+        style={{ height:56, borderTop:`1px solid ${T.border}`, display:'flex', alignItems:'center', padding:'0 36px', gap:20, background:'rgba(8,6,8,.8)', backdropFilter:'blur(12px)', flexShrink:0 }}
+        onClick={e => e.stopPropagation()}
+      >
+        {/* label */}
+        <div style={{ fontFamily:'Cormorant Garamond', fontSize:14, color:T.muted, minWidth:100 }}>
+          {LABELS[cur] || 'Harbour Barbers'}
         </div>
-        <div style={{ flex: 1, display: 'flex', gap: 4 }}>
-          {SLIDES.map((_, i) => (
-            <div key={i} onClick={() => go(i)} style={{ flex: 1, height: 3, borderRadius: 2, background: i <= cur ? C.accent : C.border, cursor: 'pointer', transition: 'background .3s' }}/>
+
+        {/* track */}
+        <div style={{ flex:1, display:'flex', gap:3, alignItems:'center' }}>
+          {SLIDES.map((_,i) => (
+            <div
+              key={i} onClick={() => go(i)}
+              style={{ flex:1, height:2, borderRadius:1, cursor:'pointer', position:'relative', background:T.border, overflow:'hidden' }}
+            >
+              <div style={{ position:'absolute', left:0, top:0, bottom:0, width:i<cur?'100%':i===cur?'100%':'0%', background:i<=cur?T.accent:'transparent', transition:'width .3s ease', borderRadius:1 }}/>
+            </div>
           ))}
         </div>
-        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-          <div onClick={() => go(cur - 1)} style={{ width: 28, height: 28, borderRadius: 6, border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: cur > 0 ? 'pointer' : 'default', opacity: cur > 0 ? 1 : .3, color: C.muted, fontSize: 13 }}>‹</div>
-          <span style={{ fontSize: 11, color: C.muted }}>{cur + 1} / {SLIDES.length}</span>
-          <div onClick={() => go(cur + 1)} style={{ width: 28, height: 28, borderRadius: 6, border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: cur < SLIDES.length - 1 ? 'pointer' : 'default', opacity: cur < SLIDES.length - 1 ? 1 : .3, color: C.muted, fontSize: 13 }}>›</div>
+
+        {/* controls */}
+        <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+          <button onClick={() => go(cur-1)} disabled={cur===0} style={{ width:32, height:32, borderRadius:8, border:`1px solid ${T.border}`, background:'transparent', display:'flex', alignItems:'center', justifyContent:'center', cursor:cur>0?'pointer':'not-allowed', opacity:cur>0?1:.3, color:T.muted, fontSize:16, lineHeight:1 }}>
+            ‹
+          </button>
+          <span style={{ fontSize:11, color:T.muted, fontVariantNumeric:'tabular-nums', minWidth:40, textAlign:'center' }}>
+            {cur+1} / {SLIDES.length}
+          </span>
+          <button onClick={() => go(cur+1)} disabled={cur===SLIDES.length-1} style={{ width:32, height:32, borderRadius:8, border:`1px solid ${T.border}`, background:cur<SLIDES.length-1?T.accent:'transparent', display:'flex', alignItems:'center', justifyContent:'center', cursor:cur<SLIDES.length-1?'pointer':'not-allowed', opacity:cur<SLIDES.length-1?1:.3, color:'#fff', fontSize:16, lineHeight:1 }}>
+            ›
+          </button>
         </div>
       </div>
     </div>
   );
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
 </script>
 </body>
 </html>
