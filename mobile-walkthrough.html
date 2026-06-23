@@ -77,14 +77,14 @@ function Phone({ children, glow = T.accent, style = {} }) {
         {/* right button */}
         <div style={{ position:'absolute', right:-3, top:194, width:3, height:109, background:'#2a2a2c', borderRadius:'0 3px 3px 0', boxShadow:'1px 0 2px rgba(0,0,0,.4)' }}/>
         {/* screen */}
-        <div style={{ borderRadius: 48, overflow: 'hidden', background: '#f7f5f0', position: 'relative', minHeight: 680 }}>
+        <div style={{ borderRadius: 48, overflow: 'hidden', background: '#f7f5f0', position: 'relative', minHeight: 680, display: 'flex', flexDirection: 'column' }}>
           {/* dynamic island */}
           <div style={{
             position: 'absolute', top: 17, left: '50%', transform: 'translateX(-50%)',
             width: 109, height: 12, background: '#111', borderRadius: 10, zIndex: 10,
             boxShadow: '0 0 0 1px rgba(255,255,255,.06)',
           }}/>
-          <div style={{ display:'flex', flexDirection:'column', height: '100%' }}>
+          <div style={{ display:'flex', flexDirection:'column', flex: 1 }}>
             {children}
           </div>
         </div>
